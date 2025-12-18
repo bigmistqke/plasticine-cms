@@ -41,6 +41,8 @@ export type {
   CMSActions,
   CMSStore,
   ContentItem,
+  MediaFile,
+  MediaState,
 } from "./store";
 
 // Components
@@ -51,3 +53,4 @@ export { ItemList } from "./components/ItemList";
 export { Editor } from "./components/Editor";
 export { SchemaForm } from "./components/SchemaForm";
 export { DynamicField } from "./components/DynamicField";
+export { MediaLibrary } from "./components/MediaLibrary";

@@ -158,8 +158,15 @@ export class GitHubClient {
    * List files in a collection
    */
   async listCollection(collection: string): Promise<GitHubFile[]> {
-    const path = this.buildPath(collection);
-    const url = `${GITHUB_API}/repos/${this.config.owner}/${this.config.repo}/contents/${path}?ref=${this.config.branch}`;
+    return this.listFolder(this.buildPath(collection));
+  }
+
+  /**
+   * List files in any folder path (relative to repo root)
+   * Optionally recurses into subdirectories
+   */
+  async listFolder(folderPath: string, recursive = false): Promise<GitHubFile[]> {
+    const url = `${GITHUB_API}/repos/${this.config.owner}/${this.config.repo}/contents/${folderPath}?ref=${this.config.branch}`;
 
     const response = await fetch(url, { headers: this.headers });
 
@@ -168,11 +175,21 @@ export class GitHubClient {
     }
 
     if (!response.ok) {
-      throw new Error(`Failed to list collection: ${response.statusText}`);
+      throw new Error(`Failed to list folder: ${response.statusText}`);
     }
 
     const data = await response.json();
-    return Array.isArray(data) ? data : [];
+    const files: GitHubFile[] = Array.isArray(data) ? data : [];
+
+    if (recursive) {
+      const dirs = files.filter((f) => f.type === "dir");
+      for (const dir of dirs) {
+        const subFiles = await this.listFolder(dir.path, true);
+        files.push(...subFiles);
+      }
+    }
+
+    return files;
   }
 
   /**
@@ -367,7 +384,7 @@ export class GitHubClient {
   }
 
   /**
-   * Delete a file
+   * Delete a file in a collection
    */
   async deleteFile(
     collection: string,
@@ -376,6 +393,17 @@ export class GitHubClient {
     sha: string
   ): Promise<void> {
     const path = this.buildPath(collection, filename);
+    await this.deleteFileByPath(path, message, sha);
+  }
+
+  /**
+   * Delete a file by its full path
+   */
+  async deleteFileByPath(
+    path: string,
+    message: string,
+    sha: string
+  ): Promise<void> {
     const url = `${GITHUB_API}/repos/${this.config.owner}/${this.config.repo}/contents/${path}`;
 
     const response = await fetch(url, {

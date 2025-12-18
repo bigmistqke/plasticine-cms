@@ -4,9 +4,11 @@ import {
   GitHubClient,
   tokenStorage,
   type GitHubConfig,
+  type GitHubFile,
   type DeviceCodeResponse,
 } from "./github";
 import type { VersionedConfig } from "./schema";
+import { getSchemaEntries, getSchemaMetadata } from "./schema";
 
 /**
  * CMS Store Types
@@ -30,6 +32,20 @@ export interface CollectionState {
   error: string | null;
 }
 
+export interface MediaFile {
+  name: string;
+  path: string;
+  sha: string;
+  url: string;
+  size: number;
+}
+
+export interface MediaState {
+  files: MediaFile[];
+  loading: boolean;
+  error: string | null;
+}
+
 export interface CMSState {
   // Auth
   authenticated: boolean;
@@ -41,7 +57,11 @@ export interface CMSState {
   // Collections
   collections: Record<string, CollectionState>;
 
-  // Current editing
+  // Media
+  media: MediaState;
+
+  // Navigation
+  currentView: "collections" | "media";
   currentCollection: string | null;
   currentItem: string | null;
 }
@@ -61,7 +81,13 @@ export interface CMSActions {
   // Files
   uploadFile(file: File, fieldPath?: string): Promise<string>;
 
+  // Media
+  loadMedia(): Promise<void>;
+  deleteMedia(url: string, path: string, sha: string): Promise<void>;
+  getMediaReferences(url: string): Array<{ collection: string; id: string; field: string }>;
+
   // Navigation
+  setCurrentView(view: "collections" | "media"): void;
   setCurrentCollection(name: string | null): void;
   setCurrentItem(id: string | null): void;
 }
@@ -89,9 +115,29 @@ export function createCMSStore(props: CMSProps): CMSStore {
         { items: [], loading: false, error: null },
       ])
     ),
+    media: { files: [], loading: false, error: null },
+    currentView: "collections",
     currentCollection: null,
     currentItem: null,
   });
+
+  /**
+   * Get media field names from a schema (fields with ui: "image" or "file")
+   */
+  const getMediaFields = (collectionName: string): string[] => {
+    const schema = config.getSchema(collectionName);
+    if (!schema) return [];
+
+    const entries = getSchemaEntries(schema);
+    if (!entries) return [];
+
+    return Object.entries(entries)
+      .filter(([_, fieldSchema]) => {
+        const meta = getSchemaMetadata(fieldSchema);
+        return meta.ui === "image" || meta.ui === "file";
+      })
+      .map(([key]) => key);
+  };
 
   const getFilename = (collection: string, data: Record<string, unknown>): string => {
     // Use slug field if present, otherwise fallback to timestamp
@@ -271,7 +317,101 @@ export function createCMSStore(props: CMSProps): CMSStore {
       return url;
     },
 
+    async loadMedia(): Promise<void> {
+      if (!client) throw new Error("Not authenticated");
+
+      setState("media", "loading", true);
+      setState("media", "error", null);
+
+      try {
+        const uploadsPath = `${github.contentPath || "content"}/uploads`;
+        const files = await client.listFolder(uploadsPath, true);
+
+        const mediaFiles: MediaFile[] = files
+          .filter((f) => f.type === "file")
+          .map((f) => ({
+            name: f.name,
+            path: f.path,
+            sha: f.sha,
+            size: f.size,
+            url: `https://raw.githubusercontent.com/${github.owner}/${github.repo}/${github.branch || "main"}/${f.path}`,
+          }));
+
+        setState("media", "files", mediaFiles);
+        setState("media", "loading", false);
+      } catch (error) {
+        setState(
+          produce((s) => {
+            s.media.loading = false;
+            s.media.error = error instanceof Error ? error.message : "Failed to load media";
+          })
+        );
+        throw error;
+      }
+    },
+
+    getMediaReferences(url: string): Array<{ collection: string; id: string; field: string }> {
+      const references: Array<{ collection: string; id: string; field: string }> = [];
+
+      for (const collectionName of collections) {
+        const mediaFields = getMediaFields(collectionName);
+        const items = state.collections[collectionName]?.items || [];
+
+        for (const item of items) {
+          for (const field of mediaFields) {
+            if (item.data[field] === url) {
+              references.push({ collection: collectionName, id: item.id, field });
+            }
+          }
+        }
+      }
+
+      return references;
+    },
+
+    async deleteMedia(url: string, path: string, sha: string): Promise<void> {
+      if (!client) throw new Error("Not authenticated");
+
+      // Find and update all references
+      const references = actions.getMediaReferences(url);
+
+      for (const ref of references) {
+        const item = state.collections[ref.collection]?.items.find((i) => i.id === ref.id);
+        if (!item) continue;
+
+        // Create updated data with field set to undefined
+        const updatedData = { ...item.data, [ref.field]: undefined };
+
+        // Save the updated item
+        await actions.saveItem(ref.collection, updatedData, item.sha);
+      }
+
+      // Delete the media file
+      await client.deleteFileByPath(path, `Delete media: ${path}`, sha);
+
+      // Remove from local state
+      setState(
+        "media",
+        "files",
+        produce((files) => {
+          const index = files.findIndex((f) => f.path === path);
+          if (index >= 0) {
+            files.splice(index, 1);
+          }
+        })
+      );
+    },
+
+    setCurrentView(view: "collections" | "media") {
+      setState("currentView", view);
+      if (view === "media") {
+        setState("currentCollection", null);
+        setState("currentItem", null);
+      }
+    },
+
     setCurrentCollection(name: string | null) {
+      setState("currentView", "collections");
       setState("currentCollection", name);
       setState("currentItem", null);
     },

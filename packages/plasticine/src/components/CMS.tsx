@@ -6,6 +6,7 @@ import { Auth } from "./Auth";
 import { CollectionList } from "./CollectionList";
 import { ItemList } from "./ItemList";
 import { Editor } from "./Editor";
+import { MediaLibrary } from "./MediaLibrary";
 
 interface CMSProps {
   config: VersionedConfig;
@@ -47,6 +48,21 @@ function CMSLayout(props: { config: VersionedConfig }) {
         {/* Sidebar */}
         <aside class="cms-sidebar">
           <CollectionList collections={props.config.getCollections()} />
+
+          {/* Media section */}
+          <nav class="media-nav">
+            <h2 class="media-nav-title">Media</h2>
+            <ul class="media-nav-items">
+              <li
+                class="media-nav-item"
+                classList={{ active: state.currentView === "media" }}
+                onClick={() => actions.setCurrentView("media")}
+              >
+                <span class="media-nav-name">Library</span>
+                <span class="media-nav-count">{state.media.files.length}</span>
+              </li>
+            </ul>
+          </nav>
         </aside>
 
         {/* Main content */}
@@ -59,6 +75,11 @@ function CMSLayout(props: { config: VersionedConfig }) {
               </div>
             }
           >
+            {/* Show media library */}
+            <Match when={state.currentView === "media"}>
+              <MediaLibrary />
+            </Match>
+
             {/* Show editor when item is selected */}
             <Match when={state.currentItem && currentSchema()}>
               <Editor
