@@ -1,0 +1,19 @@
+{
+  "slug": "post-uno",
+  "title": "this is post uno",
+  "content": "## POST UNO",
+  "draft": false,
+  "images": [
+    {
+      "src": "https://raw.githubusercontent.com/bigmistqke/plasticine-cms/main/demo/demo1/content/uploads/posts/1766095545294-31.jpg",
+      "tags": [
+        {
+          "name": "cool"
+        },
+        {
+          "name": "alright alright"
+        }
+      ]
+    }
+  ]
+}
