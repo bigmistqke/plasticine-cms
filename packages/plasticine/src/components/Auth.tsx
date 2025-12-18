@@ -1,5 +1,5 @@
 import { Match, Show, Switch, createSignal } from "solid-js";
-import { useCMS } from "../store";
+import { useCMS } from "../context";
 
 /**
  * Authentication component with Device Flow OAuth support
@@ -29,8 +29,8 @@ export function Auth() {
         </Show>
 
         <Switch
-          fallback={
-            /* Device Flow requires a proxy for browsers - disabled for now */
+            {/* Device Flow requires a proxy for browsers - disabled for now */}
+           /* fallback={
             <>
               <button
                 class="btn btn-primary btn-large"
@@ -44,10 +44,10 @@ export function Auth() {
                 Or use a Personal Access Token
               </button>
             </>
-          }
+          } */
         >
           {/* Device Code Display */}
-          <Match when={state.deviceCode}>
+          {/* <Match when={state.deviceCode}>
             <div class="device-code-flow">
               <p>Go to:</p>
               <a
@@ -64,7 +64,7 @@ export function Auth() {
 
               <p class="waiting-text">Waiting for authorization...</p>
             </div>
-          </Match>
+          </Match> */}
           {/* Token Input */}
           <Match when={useToken()}>
             <form onSubmit={handleTokenSubmit} class="token-form">

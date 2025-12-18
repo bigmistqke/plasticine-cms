@@ -1,100 +1,5 @@
 import * as v from "valibot";
-
-/**
- * Schema versioning system with automatic migrations
- */
-
-// =============================================================================
-// Config Types
-// =============================================================================
-
-export interface PlasticineConfig {
-  schemas: Record<string, v.GenericSchema>;
-}
-
-export interface VersionedConfig {
-  /** Current config */
-  config: PlasticineConfig;
-  /** All versions (oldest first) */
-  versions: PlasticineConfig[];
-  /** Migration functions (oldest first) */
-  migrations: Array<(old: any) => any>;
-
-  /** Add a new version with migration */
-  version(
-    newConfig: PlasticineConfig,
-    migrate: (old: any) => any
-  ): VersionedConfig;
-
-  /** Parse content data for a collection, migrating if needed */
-  parseCollection(collection: string, data: unknown): unknown;
-
-  /** Get current schema for a collection */
-  getSchema(collection: string): v.GenericSchema | undefined;
-
-  /** Get all collection names */
-  getCollections(): string[];
-}
-
-/**
- * Define a versioned CMS config
- * Accepts an object where keys are collection names and values are VersionedSchema objects
- */
-export function defineConfig(
-  collections: Record<string, VersionedSchema<any[], v.GenericSchema>>
-): VersionedConfig {
-  // Extract the current schema from each VersionedSchema
-  const schemas: Record<string, v.GenericSchema> = {};
-  for (const [name, versionedSchema] of Object.entries(collections)) {
-    schemas[name] = versionedSchema.schema;
-  }
-  const config: PlasticineConfig = { schemas };
-  return createVersionedConfig([config], [], collections);
-}
-
-function createVersionedConfig(
-  versions: PlasticineConfig[],
-  migrations: Array<(old: any) => any>,
-  collections: Record<string, VersionedSchema<any[], v.GenericSchema>>
-): VersionedConfig {
-  const current = versions[versions.length - 1];
-
-  return {
-    config: current,
-    versions,
-    migrations,
-
-    version(newConfig, migrate) {
-      return createVersionedConfig(
-        [...versions, newConfig],
-        [...migrations, migrate],
-        collections
-      );
-    },
-
-    parseCollection(collection, data) {
-      const versionedSchema = collections[collection];
-      if (!versionedSchema) {
-        throw new Error(`Unknown collection: ${collection}`);
-      }
-
-      // Use the VersionedSchema's parse method which handles migrations internally
-      return versionedSchema.parse(data);
-    },
-
-    getSchema(collection) {
-      return current.schemas[collection];
-    },
-
-    getCollections() {
-      return Object.keys(current.schemas);
-    },
-  };
-}
-
-// =============================================================================
-// Legacy Schema API (for individual collection schemas)
-// =============================================================================
+import { Prettify } from "./utils";
 
 class SchemaError<
   TSchema extends
@@ -110,8 +15,6 @@ class SchemaError<
     this.issues = issues;
   }
 }
-
-type Prettify<T> = { [K in keyof T]: T[K] } & {};
 
 interface Version<
   T1 extends v.GenericSchema = v.GenericSchema,

@@ -5,10 +5,10 @@ export * from "./schema";
 export * from "./fields";
 
 // Backend
-export * from "./backend";
+export * from "./backend/types";
 
 // GitHub backend
-export * from "./github";
+export * from "./backend/github";
 
 // Store
 export * from "./store";

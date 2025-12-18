@@ -1,5 +1,5 @@
 import { createEffect, createSignal, onMount, Show } from "solid-js";
-import { useCMS } from "../store";
+import { useCMS } from "../context";
 
 export function SchemaEditor() {
   const [state, actions] = useCMS();
@@ -46,7 +46,11 @@ export function SchemaEditor() {
         <h2>Schema Editor</h2>
         <div class="schema-editor-actions">
           <Show when={isDirty()}>
-            <button class="btn btn-secondary" onClick={handleReset} disabled={state.schema.saving}>
+            <button
+              class="btn btn-secondary"
+              onClick={handleReset}
+              disabled={state.schema.saving}
+            >
               Reset
             </button>
           </Show>

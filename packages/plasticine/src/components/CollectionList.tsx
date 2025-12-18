@@ -1,6 +1,6 @@
 import { A } from "@solidjs/router";
 import { For } from "solid-js";
-import { useCMS } from "../store";
+import { useCMS } from "../context";
 
 interface CollectionListProps {
   collections: string[];

@@ -475,7 +475,7 @@ export const tokenStorage = {
  * Create a GitHub backend for Plasticine.
  * Returns { content, media } that both use the same GitHubClient.
  */
-import type { Backend, ConfigBackend, ContentBackend, ContentItem, MediaBackend, MediaFile } from "./backend";
+import type { Backend, ConfigBackend, ContentBackend, ContentItem, MediaBackend, MediaFile } from "./types";
 
 export interface GitHubBackendConfig extends GitHubConfig {
   token: string;

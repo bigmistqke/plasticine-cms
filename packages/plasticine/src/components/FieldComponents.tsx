@@ -2,9 +2,9 @@ import { Field, FieldArray, insert, remove } from "@formisch/solid";
 import { createSignal, For, Show, type Component } from "solid-js";
 import { Dynamic, Index } from "solid-js/web";
 import type * as v from "valibot";
+import { useCMS } from "../context";
 import type { FieldMetadata, FieldUIType } from "../fields";
 import { getSchemaMetadata } from "../schema";
-import { useCMS } from "../store";
 
 export interface FieldState {
   input: unknown;
@@ -12,229 +12,23 @@ export interface FieldState {
   errors: readonly string[] | null;
 }
 
-export interface InputProps {
+export interface FieldComponentProps {
   field: FieldState;
   metadata: Partial<FieldMetadata>;
 }
 
-export const TextField: Component<InputProps> = (props) => {
-  return (
-    <input
-      type="text"
-      class="input"
-      {...(props.field.props as Record<string, string>)}
-      value={(props.field.input as string) ?? ""}
-      placeholder={props.metadata.placeholder}
-    />
-  );
-};
+export interface DynamicFieldProps {
+  form: any;
+  path: any;
+  schema: v.GenericSchema;
+  label?: string;
+}
 
-export const TextareaField: Component<InputProps> = (props) => {
-  return (
-    <textarea
-      class="input textarea"
-      {...(props.field.props as Record<string, string>)}
-      value={(props.field.input as string) ?? ""}
-      placeholder={props.metadata.placeholder}
-      rows={5}
-    />
-  );
-};
-
-export const MarkdownField: Component<InputProps> = (props) => {
-  return (
-    <textarea
-      class="input textarea markdown-editor"
-      {...(props.field.props as Record<string, string>)}
-      value={(props.field.input as string) ?? ""}
-      placeholder={props.metadata.placeholder || "Write markdown..."}
-      rows={10}
-    />
-  );
-};
-
-export const NumberField: Component<InputProps> = (props) => {
-  return (
-    <input
-      type="number"
-      class="input"
-      {...(props.field.props as Record<string, string>)}
-      value={(props.field.input as number) ?? ""}
-      min={props.metadata.min as number}
-      max={props.metadata.max as number}
-      step={props.metadata.step as number}
-    />
-  );
-};
-
-export const BooleanField: Component<InputProps> = (props) => {
-  return (
-    <label class="checkbox-label">
-      <input
-        type="checkbox"
-        class="checkbox"
-        {...(props.field.props as Record<string, string>)}
-        checked={(props.field.input as boolean) ?? false}
-      />
-      <Show when={props.metadata.description}>
-        <span class="checkbox-description">{props.metadata.description}</span>
-      </Show>
-    </label>
-  );
-};
-
-export const DateField: Component<InputProps> = (props) => {
-  return (
-    <input
-      type="date"
-      class="input"
-      {...(props.field.props as Record<string, string>)}
-      value={(props.field.input as string) ?? ""}
-    />
-  );
-};
-
-export const DateTimeField: Component<InputProps> = (props) => {
-  return (
-    <input
-      type="datetime-local"
-      class="input"
-      {...(props.field.props as Record<string, string>)}
-      value={(props.field.input as string) ?? ""}
-    />
-  );
-};
-
-export const SlugField: Component<InputProps> = (props) => {
-  return (
-    <input
-      type="text"
-      class="input slug-input"
-      {...(props.field.props as Record<string, string>)}
-      value={(props.field.input as string) ?? ""}
-      placeholder={props.metadata.placeholder || "my-slug"}
-      pattern="^[a-z0-9]+(?:-[a-z0-9]+)*$"
-    />
-  );
-};
-
-export const ImageField: Component<InputProps> = (props) => {
-  const [, actions] = useCMS();
-  const [uploading, setUploading] = createSignal(false);
-  let urlInputRef: HTMLInputElement | undefined;
-
-  const value = () => props.field.input as string;
-  const accept = () => (props.metadata.accept as string) || "image/*";
-  const fieldPath = () => props.metadata.path as string | undefined;
-
-  const handleFileSelect = async (e: Event) => {
-    const input = e.target as HTMLInputElement;
-    const file = input.files?.[0];
-    if (!file) return;
-
-    setUploading(true);
-    try {
-      const url = await actions.uploadFile(file, fieldPath());
-      if (urlInputRef) {
-        urlInputRef.value = url;
-        urlInputRef.dispatchEvent(new Event("input", { bubbles: true }));
-      }
-    } catch (err) {
-      console.error("Upload failed:", err);
-      alert(
-        "Upload failed: " +
-          (err instanceof Error ? err.message : "Unknown error"),
-      );
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  return (
-    <div class="image-input">
-      <div class="image-input-row">
-        <input
-          ref={urlInputRef}
-          type="url"
-          class="input"
-          {...(props.field.props as Record<string, string>)}
-          value={value() ?? ""}
-          placeholder="https://example.com/image.jpg"
-        />
-        <label class="btn btn-secondary upload-btn">
-          {uploading() ? "..." : "Upload"}
-          <input
-            type="file"
-            accept={accept()}
-            onChange={handleFileSelect}
-            style={{ display: "none" }}
-            disabled={uploading()}
-          />
-        </label>
-      </div>
-      <Show when={value()}>
-        <img src={value()} alt="Preview" class="image-preview" />
-      </Show>
-    </div>
-  );
-};
-
-export const SelectField: Component<InputProps> = (props) => {
-  const options = () => (props.metadata.options as string[]) || [];
-
-  return (
-    <select
-      class="input select"
-      {...(props.field.props as Record<string, string>)}
-      value={(props.field.input as string) ?? ""}
-    >
-      <option value="">Select...</option>
-      <For each={options()}>
-        {(option) => <option value={option}>{option}</option>}
-      </For>
-    </select>
-  );
-};
-
-export const ReferenceField: Component<InputProps> = (props) => {
-  const [state] = useCMS();
-  const collectionName = () => props.metadata.collection as string;
-  const items = () => state.collections[collectionName()]?.items || [];
-
-  return (
-    <select
-      class="input select"
-      {...(props.field.props as Record<string, string>)}
-      value={(props.field.input as string) ?? ""}
-    >
-      <option value="">Select {collectionName()}...</option>
-      <For each={items()}>
-        {(item) => (
-          <option value={item.id}>
-            {(item.data.name as string) ||
-              (item.data.title as string) ||
-              item.id}
-          </option>
-        )}
-      </For>
-    </select>
-  );
-};
-
-export const fieldComponents: Record<FieldUIType, Component<InputProps>> = {
-  text: TextField,
-  textarea: TextareaField,
-  markdown: MarkdownField,
-  number: NumberField,
-  boolean: BooleanField,
-  date: DateField,
-  datetime: DateTimeField,
-  slug: SlugField,
-  image: ImageField,
-  file: ImageField,
-  select: SelectField,
-  reference: ReferenceField,
-};
+/**********************************************************************************/
+/*                                                                                */
+/*                                     Utils                                      */
+/*                                                                                */
+/**********************************************************************************/
 
 /**
  * Check if a schema is an array type
@@ -252,13 +46,6 @@ function isObjectSchema(schema: v.GenericSchema): boolean {
   if (metadata.ui) return false;
 
   return "type" in schema && schema.type === "object" && "entries" in schema;
-}
-
-interface DynamicFieldProps {
-  form: any;
-  path: any;
-  schema: v.GenericSchema;
-  label?: string;
 }
 
 /**
@@ -301,6 +88,234 @@ function getFieldLabel(
     .replace(/^./, (s) => s.toUpperCase())
     .trim();
 }
+
+/**********************************************************************************/
+/*                                                                                */
+/*                                 Field Components                               */
+/*                                                                                */
+/**********************************************************************************/
+
+export const TextField: Component<FieldComponentProps> = (props) => {
+  return (
+    <input
+      type="text"
+      class="input"
+      {...props.field.props}
+      value={(props.field.input as string) ?? ""}
+      placeholder={props.metadata.placeholder}
+    />
+  );
+};
+
+export const TextareaField: Component<FieldComponentProps> = (props) => {
+  return (
+    <textarea
+      class="input textarea"
+      {...props.field.props}
+      value={(props.field.input as string) ?? ""}
+      placeholder={props.metadata.placeholder}
+      rows={5}
+    />
+  );
+};
+
+export const MarkdownField: Component<FieldComponentProps> = (props) => {
+  return (
+    <textarea
+      class="input textarea markdown-editor"
+      {...props.field.props}
+      value={(props.field.input as string) ?? ""}
+      placeholder={props.metadata.placeholder || "Write markdown..."}
+      rows={10}
+    />
+  );
+};
+
+export const NumberField: Component<FieldComponentProps> = (props) => {
+  return (
+    <input
+      type="number"
+      class="input"
+      {...props.field.props}
+      value={(props.field.input as number) ?? ""}
+      min={props.metadata.min as number}
+      max={props.metadata.max as number}
+      step={props.metadata.step as number}
+    />
+  );
+};
+
+export const BooleanField: Component<FieldComponentProps> = (props) => {
+  return (
+    <label class="checkbox-label">
+      <input
+        type="checkbox"
+        class="checkbox"
+        {...props.field.props}
+        checked={(props.field.input as boolean) ?? false}
+      />
+      <Show when={props.metadata.description}>
+        <span class="checkbox-description">{props.metadata.description}</span>
+      </Show>
+    </label>
+  );
+};
+
+export const DateField: Component<FieldComponentProps> = (props) => {
+  return (
+    <input
+      type="date"
+      class="input"
+      {...props.field.props}
+      value={(props.field.input as string) ?? ""}
+    />
+  );
+};
+
+export const DateTimeField: Component<FieldComponentProps> = (props) => {
+  return (
+    <input
+      type="datetime-local"
+      class="input"
+      {...props.field.props}
+      value={(props.field.input as string) ?? ""}
+    />
+  );
+};
+
+export const SlugField: Component<FieldComponentProps> = (props) => {
+  return (
+    <input
+      type="text"
+      class="input slug-input"
+      {...props.field.props}
+      value={(props.field.input as string) ?? ""}
+      placeholder={props.metadata.placeholder || "my-slug"}
+      pattern="^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    />
+  );
+};
+
+export const ImageField: Component<FieldComponentProps> = (props) => {
+  const [, actions] = useCMS();
+  const [uploading, setUploading] = createSignal(false);
+  let urlInputRef: HTMLInputElement | undefined;
+
+  const value = () => props.field.input as string;
+  const accept = () => (props.metadata.accept as string) || "image/*";
+  const fieldPath = () => props.metadata.path as string | undefined;
+
+  const handleFileSelect = async (e: Event) => {
+    const input = e.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const url = await actions.uploadFile(file, fieldPath());
+      if (urlInputRef) {
+        urlInputRef.value = url;
+        urlInputRef.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+    } catch (err) {
+      console.error("Upload failed:", err);
+      alert(
+        "Upload failed: " +
+          (err instanceof Error ? err.message : "Unknown error"),
+      );
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div class="image-input">
+      <div class="image-input-row">
+        <input
+          ref={urlInputRef}
+          type="url"
+          class="input"
+          {...props.field.props}
+          value={value() ?? ""}
+          placeholder="https://example.com/image.jpg"
+        />
+        <label class="btn btn-secondary upload-btn">
+          {uploading() ? "..." : "Upload"}
+          <input
+            type="file"
+            accept={accept()}
+            onChange={handleFileSelect}
+            style={{ display: "none" }}
+            disabled={uploading()}
+          />
+        </label>
+      </div>
+      <Show when={value()}>
+        <img src={value()} alt="Preview" class="image-preview" />
+      </Show>
+    </div>
+  );
+};
+
+export const SelectField: Component<FieldComponentProps> = (props) => {
+  const options = () => (props.metadata.options as string[]) || [];
+
+  return (
+    <select
+      class="input select"
+      {...props.field.props}
+      value={(props.field.input as string) ?? ""}
+    >
+      <option value="">Select...</option>
+      <For each={options()}>
+        {(option) => <option value={option}>{option}</option>}
+      </For>
+    </select>
+  );
+};
+
+export const ReferenceField: Component<FieldComponentProps> = (props) => {
+  const [state] = useCMS();
+  const collectionName = () => props.metadata.collection as string;
+  const items = () => state.collections[collectionName()]?.items || [];
+
+  return (
+    <select
+      class="input select"
+      {...props.field.props}
+      value={(props.field.input as string) ?? ""}
+    >
+      <option value="">Select {collectionName()}...</option>
+      <For each={items()}>
+        {(item) => (
+          <option value={item.id}>
+            {(item.data.name as string) ||
+              (item.data.title as string) ||
+              item.id}
+          </option>
+        )}
+      </For>
+    </select>
+  );
+};
+
+export const fieldComponents: Record<
+  FieldUIType,
+  Component<FieldComponentProps>
+> = {
+  text: TextField,
+  textarea: TextareaField,
+  markdown: MarkdownField,
+  number: NumberField,
+  boolean: BooleanField,
+  date: DateField,
+  datetime: DateTimeField,
+  slug: SlugField,
+  image: ImageField,
+  file: ImageField,
+  select: SelectField,
+  reference: ReferenceField,
+};
 
 /**
  * Dynamic field component that renders the appropriate input based on schema

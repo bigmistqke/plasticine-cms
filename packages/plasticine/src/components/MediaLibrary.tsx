@@ -1,5 +1,6 @@
 import { For, Show, createSignal } from "solid-js";
-import { useCMS, type MediaFile } from "../store";
+import { useCMS } from "../context";
+import { type MediaFile } from "../store";
 
 /**
  * Media library for viewing and managing uploaded files
@@ -23,9 +24,10 @@ export function MediaLibrary() {
     const references = actions.getMediaReferences(file.url);
     const refCount = references.length;
 
-    const message = refCount > 0
-      ? `This will delete the file and remove ${refCount} reference${refCount > 1 ? "s" : ""} from your content. Continue?`
-      : "Delete this file?";
+    const message =
+      refCount > 0
+        ? `This will delete the file and remove ${refCount} reference${refCount > 1 ? "s" : ""} from your content. Continue?`
+        : "Delete this file?";
 
     if (!confirm(message)) return;
 
@@ -63,7 +65,10 @@ export function MediaLibrary() {
             const references = () => actions.getMediaReferences(file.url);
 
             return (
-              <div class="media-item" classList={{ deleting: deleting() === file.path }}>
+              <div
+                class="media-item"
+                classList={{ deleting: deleting() === file.path }}
+              >
                 <div class="media-preview">
                   <Show
                     when={isImage(file.name)}
@@ -86,7 +91,9 @@ export function MediaLibrary() {
                   <span class="media-meta">
                     {formatSize(file.size)}
                     <Show when={references().length > 0}>
-                      {" · "}{references().length} ref{references().length > 1 ? "s" : ""}
+                      {" · "}
+                      {references().length} ref
+                      {references().length > 1 ? "s" : ""}
                     </Show>
                   </span>
                 </div>

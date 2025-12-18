@@ -1,9 +1,5 @@
 import * as v from "valibot";
 
-/**
- * Custom field validators with UI metadata for the CMS
- */
-
 export type FieldUIType =
   | "text"
   | "textarea"

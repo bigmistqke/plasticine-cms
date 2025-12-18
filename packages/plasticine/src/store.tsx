@@ -1,8 +1,7 @@
-import { createContext, useContext, type JSX } from "solid-js";
 import { createStore, produce } from "solid-js/store";
-import type { Backend, ContentItem, MediaFile } from "./backend";
-import { tokenStorage } from "./github";
-import type { PlasticineConfig } from "./schema";
+import { tokenStorage } from "./backend/github";
+import type { Backend, ContentItem, MediaFile } from "./backend/types";
+import type { PlasticineConfig } from "./define-config";
 import { getSchemaEntries, getSchemaMetadata } from "./schema";
 
 /**
@@ -10,7 +9,9 @@ import { getSchemaEntries, getSchemaMetadata } from "./schema";
  */
 export interface BackendFactory {
   createBackend(token: string): Backend;
-  getUser(token: string): Promise<{ login: string; avatar_url: string; name: string }>;
+  getUser(
+    token: string,
+  ): Promise<{ login: string; avatar_url: string; name: string }>;
 }
 
 /**
@@ -24,7 +25,7 @@ export interface CMSProps {
 }
 
 // Re-export for convenience
-export type { ContentItem, MediaFile } from "./backend";
+export type { ContentItem, MediaFile } from "./backend/types";
 
 export interface CollectionState {
   items: Array<ContentItem & { filename: string }>;
@@ -81,7 +82,11 @@ export interface CMSActions {
   loadAllData(): Promise<void>;
 
   // Collections
-  saveItem(collection: string, data: Record<string, unknown>, existingSha?: string): Promise<void>;
+  saveItem(
+    collection: string,
+    data: Record<string, unknown>,
+    existingSha?: string,
+  ): Promise<void>;
   deleteItem(collection: string, id: string, sha?: string): Promise<void>;
 
   // Files
@@ -89,7 +94,9 @@ export interface CMSActions {
 
   // Media
   deleteMedia(url: string, path: string, sha?: string): Promise<void>;
-  getMediaReferences(url: string): Array<{ collection: string; id: string; field: string }>;
+  getMediaReferences(
+    url: string,
+  ): Array<{ collection: string; id: string; field: string }>;
 
   // Schema
   loadSchema(): Promise<void>;
@@ -107,7 +114,11 @@ export type CMSStore = [CMSState, CMSActions];
  * Create the CMS store
  */
 export function createCMSStore(props: CMSProps): CMSStore {
-  const { config, backend: backendFactory, schemaPath = "plasticine/config.ts" } = props;
+  const {
+    config,
+    backend: backendFactory,
+    schemaPath = "plasticine/config.ts",
+  } = props;
   let backend: Backend | null = null;
 
   const collectionNames = config.getCollections();
@@ -123,10 +134,16 @@ export function createCMSStore(props: CMSProps): CMSStore {
       collectionNames.map((name) => [
         name,
         { items: [], loading: false, error: null },
-      ])
+      ]),
     ),
     media: { files: [], loading: false, error: null },
-    schema: { content: "", sha: null, loading: false, saving: false, error: null },
+    schema: {
+      content: "",
+      sha: null,
+      loading: false,
+      saving: false,
+      error: null,
+    },
     currentView: "collections",
     currentCollection: null,
     currentItem: null,
@@ -162,7 +179,9 @@ export function createCMSStore(props: CMSProps): CMSStore {
   /**
    * Load a single collection's items
    */
-  const loadCollection = async (name: string): Promise<Array<ContentItem & { filename: string }>> => {
+  const loadCollection = async (
+    name: string,
+  ): Promise<Array<ContentItem & { filename: string }>> => {
     if (!backend) throw new Error("Not authenticated");
 
     const schema = config.getSchema(name);
@@ -172,7 +191,10 @@ export function createCMSStore(props: CMSProps): CMSStore {
 
     return items.map((item) => {
       // Parse through versioned config (auto-migrates)
-      const parsed = config.parseCollection(name, item.data) as Record<string, unknown>;
+      const parsed = config.parseCollection(name, item.data) as Record<
+        string,
+        unknown
+      >;
       return {
         ...item,
         filename: `${item.id}.json`,
@@ -196,7 +218,7 @@ export function createCMSStore(props: CMSProps): CMSStore {
             s.authenticated = true;
             s.user = user;
             s.authLoading = false;
-          })
+          }),
         );
 
         // Load all data after authentication
@@ -205,8 +227,9 @@ export function createCMSStore(props: CMSProps): CMSStore {
         setState(
           produce((s) => {
             s.authLoading = false;
-            s.authError = error instanceof Error ? error.message : "Authentication failed";
-          })
+            s.authError =
+              error instanceof Error ? error.message : "Authentication failed";
+          }),
         );
         throw error;
       }
@@ -226,7 +249,7 @@ export function createCMSStore(props: CMSProps): CMSStore {
             s.collections[name] = { items: [], loading: false, error: null };
           }
           s.media = { files: [], loading: false, error: null };
-        })
+        }),
       );
     },
 
@@ -239,10 +262,12 @@ export function createCMSStore(props: CMSProps): CMSStore {
       try {
         // Load all collections and media in parallel
         const [collectionsData, mediaData] = await Promise.all([
-          Promise.all(collectionNames.map(async (name) => ({
-            name,
-            items: await loadCollection(name),
-          }))),
+          Promise.all(
+            collectionNames.map(async (name) => ({
+              name,
+              items: await loadCollection(name),
+            })),
+          ),
           backend.media.listMedia(),
         ]);
 
@@ -254,30 +279,43 @@ export function createCMSStore(props: CMSProps): CMSStore {
             }
             s.media.files = mediaData;
             s.dataLoading = false;
-          })
+          }),
         );
       } catch (error) {
         setState(
           produce((s) => {
             s.dataLoading = false;
-            s.dataError = error instanceof Error ? error.message : "Failed to load data";
-          })
+            s.dataError =
+              error instanceof Error ? error.message : "Failed to load data";
+          }),
         );
         throw error;
       }
     },
 
-    async saveItem(collection: string, data: Record<string, unknown>, existingSha?: string) {
+    async saveItem(
+      collection: string,
+      data: Record<string, unknown>,
+      existingSha?: string,
+    ) {
       if (!backend) throw new Error("Not authenticated");
 
       const schema = config.getSchema(collection);
       if (!schema) throw new Error(`Unknown collection: ${collection}`);
 
       // Validate data against current schema
-      const parsed = config.parseCollection(collection, data) as Record<string, unknown>;
+      const parsed = config.parseCollection(collection, data) as Record<
+        string,
+        unknown
+      >;
       const id = getId(parsed);
 
-      const { sha } = await backend.content.saveItem(collection, id, parsed, existingSha);
+      const { sha } = await backend.content.saveItem(
+        collection,
+        id,
+        parsed,
+        existingSha,
+      );
 
       // Update local state
       setState(
@@ -292,7 +330,7 @@ export function createCMSStore(props: CMSProps): CMSStore {
           } else {
             items.push(newItem);
           }
-        })
+        }),
       );
     },
 
@@ -310,7 +348,7 @@ export function createCMSStore(props: CMSProps): CMSStore {
           if (index >= 0) {
             items.splice(index, 1);
           }
-        })
+        }),
       );
     },
 
@@ -332,14 +370,20 @@ export function createCMSStore(props: CMSProps): CMSStore {
             size: file.size,
             url,
           });
-        })
+        }),
       );
 
       return url;
     },
 
-    getMediaReferences(url: string): Array<{ collection: string; id: string; field: string }> {
-      const references: Array<{ collection: string; id: string; field: string }> = [];
+    getMediaReferences(
+      url: string,
+    ): Array<{ collection: string; id: string; field: string }> {
+      const references: Array<{
+        collection: string;
+        id: string;
+        field: string;
+      }> = [];
 
       for (const collectionName of collectionNames) {
         const mediaFields = getMediaFields(collectionName);
@@ -348,7 +392,11 @@ export function createCMSStore(props: CMSProps): CMSStore {
         for (const item of items) {
           for (const field of mediaFields) {
             if (item.data[field] === url) {
-              references.push({ collection: collectionName, id: item.id, field });
+              references.push({
+                collection: collectionName,
+                id: item.id,
+                field,
+              });
             }
           }
         }
@@ -364,7 +412,9 @@ export function createCMSStore(props: CMSProps): CMSStore {
       const references = actions.getMediaReferences(url);
 
       for (const ref of references) {
-        const item = state.collections[ref.collection]?.items.find((i) => i.id === ref.id);
+        const item = state.collections[ref.collection]?.items.find(
+          (i) => i.id === ref.id,
+        );
         if (!item) continue;
 
         // Create updated data with field set to undefined
@@ -386,7 +436,7 @@ export function createCMSStore(props: CMSProps): CMSStore {
           if (index >= 0) {
             files.splice(index, 1);
           }
-        })
+        }),
       );
     },
 
@@ -403,14 +453,15 @@ export function createCMSStore(props: CMSProps): CMSStore {
             s.schema.content = content;
             s.schema.sha = sha || null;
             s.schema.loading = false;
-          })
+          }),
         );
       } catch (error) {
         setState(
           produce((s) => {
             s.schema.loading = false;
-            s.schema.error = error instanceof Error ? error.message : "Failed to load schema";
-          })
+            s.schema.error =
+              error instanceof Error ? error.message : "Failed to load schema";
+          }),
         );
         throw error;
       }
@@ -423,20 +474,25 @@ export function createCMSStore(props: CMSProps): CMSStore {
       setState("schema", "error", null);
 
       try {
-        const { sha } = await backend.config.writeFile(schemaPath, content, state.schema.sha || undefined);
+        const { sha } = await backend.config.writeFile(
+          schemaPath,
+          content,
+          state.schema.sha || undefined,
+        );
         setState(
           produce((s) => {
             s.schema.content = content;
             s.schema.sha = sha || null;
             s.schema.saving = false;
-          })
+          }),
         );
       } catch (error) {
         setState(
           produce((s) => {
             s.schema.saving = false;
-            s.schema.error = error instanceof Error ? error.message : "Failed to save schema";
-          })
+            s.schema.error =
+              error instanceof Error ? error.message : "Failed to save schema";
+          }),
         );
         throw error;
       }
@@ -473,30 +529,4 @@ export function createCMSStore(props: CMSProps): CMSStore {
   }
 
   return [state, actions];
-}
-
-/**
- * Context for providing CMS store to components
- */
-const CMSContext = createContext<CMSStore>();
-
-export function CMSProvider(props: {
-  config: PlasticineConfig;
-  backend: BackendFactory;
-  schemaPath?: string;
-  children: JSX.Element;
-}) {
-  const store = createCMSStore({ config: props.config, backend: props.backend, schemaPath: props.schemaPath });
-
-  return (
-    <CMSContext.Provider value={store}>{props.children}</CMSContext.Provider>
-  );
-}
-
-export function useCMS(): CMSStore {
-  const context = useContext(CMSContext);
-  if (!context) {
-    throw new Error("useCMS must be used within a CMSProvider");
-  }
-  return context;
 }

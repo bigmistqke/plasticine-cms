@@ -1,7 +1,8 @@
 import { A, Route, Router, useParams } from "@solidjs/router";
 import { Show, type JSX } from "solid-js";
-import type { PlasticineConfig } from "../schema";
-import { CMSProvider, useCMS, type BackendFactory } from "../store";
+import { CMSProvider, useCMS } from "../context";
+import type { PlasticineConfig } from "../define-config";
+import { type BackendFactory } from "../store";
 import { Auth } from "./Auth";
 import { CollectionList } from "./CollectionList";
 import { Editor } from "./Editor";
@@ -57,14 +58,19 @@ function ItemListRoute() {
 /**
  * Main CMS layout component - wraps route content
  */
-function CMSLayout(props: { config: PlasticineConfig; children?: JSX.Element }) {
+function CMSLayout(props: {
+  config: PlasticineConfig;
+  children?: JSX.Element;
+}) {
   const [state, actions] = useCMS();
 
   return (
     <div class="cms-layout">
       {/* Header */}
       <header class="cms-header">
-        <A href="/" class="cms-logo">Plasticine</A>
+        <A href="/" class="cms-logo">
+          Plasticine
+        </A>
         <Show when={state.user}>
           <div class="cms-user">
             <img
@@ -89,11 +95,7 @@ function CMSLayout(props: { config: PlasticineConfig; children?: JSX.Element }) 
           <nav class="media-nav">
             <h2 class="media-nav-title">Media</h2>
             <ul class="media-nav-items">
-              <A
-                href="/media"
-                class="media-nav-item"
-                activeClass="active"
-              >
+              <A href="/media" class="media-nav-item" activeClass="active">
                 <span class="media-nav-name">Library</span>
                 <span class="media-nav-count">{state.media.files.length}</span>
               </A>
@@ -104,11 +106,7 @@ function CMSLayout(props: { config: PlasticineConfig; children?: JSX.Element }) 
           <nav class="schema-nav">
             <h2 class="schema-nav-title">Settings</h2>
             <ul class="schema-nav-items">
-              <A
-                href="/schema"
-                class="schema-nav-item"
-                activeClass="active"
-              >
+              <A href="/schema" class="schema-nav-item" activeClass="active">
                 <span class="schema-nav-name">Schema</span>
               </A>
             </ul>
@@ -116,9 +114,7 @@ function CMSLayout(props: { config: PlasticineConfig; children?: JSX.Element }) 
         </aside>
 
         {/* Main content - renders nested routes */}
-        <main class="cms-main">
-          {props.children}
-        </main>
+        <main class="cms-main">{props.children}</main>
       </div>
     </div>
   );
@@ -169,7 +165,10 @@ export function CMS(props: CMSProps) {
       <Route path="/" component={Welcome} />
       <Route path="/schema" component={SchemaEditor} />
       <Route path="/media" component={MediaLibrary} />
-      <Route path="/collections/:collection/:item" component={() => <EditorRoute config={props.config} />} />
+      <Route
+        path="/collections/:collection/:item"
+        component={() => <EditorRoute config={props.config} />}
+      />
       <Route path="/collections/:collection" component={ItemListRoute} />
     </Router>
   );

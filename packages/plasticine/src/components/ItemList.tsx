@@ -1,6 +1,6 @@
 import { A } from "@solidjs/router";
 import { For, Show, createSignal } from "solid-js";
-import { useCMS } from "../store";
+import { useCMS } from "../context";
 
 interface ItemListProps {
   collectionKey: string;
@@ -61,9 +61,7 @@ export function ItemList(props: ItemListProps) {
       </Show>
 
       <Show when={!collectionState()?.loading && items().length === 0}>
-        <div class="item-list-empty">
-          No items yet. Create your first one!
-        </div>
+        <div class="item-list-empty">No items yet. Create your first one!</div>
       </Show>
 
       <ul class="item-list-items">

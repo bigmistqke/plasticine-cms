@@ -1,7 +1,8 @@
 import { useNavigate } from "@solidjs/router";
 import { Show } from "solid-js";
 import type * as v from "valibot";
-import { useCMS, type ContentItem } from "../store";
+import { useCMS } from "../context";
+import { type ContentItem } from "../store";
 import { SchemaForm } from "./SchemaForm";
 
 interface EditorProps {
@@ -39,7 +40,9 @@ export function Editor(props: EditorProps) {
       // Use slug or id field for the filename
       const id = (data.slug ?? data.id) as string;
       if (id) {
-        navigate(`/collections/${props.collectionKey}/${id}`, { replace: true });
+        navigate(`/collections/${props.collectionKey}/${id}`, {
+          replace: true,
+        });
       }
     }
   };
