@@ -1,9 +1,10 @@
-import { Show, createResource, createEffect } from "solid-js";
-import { useCMS, type CollectionConfig } from "../store";
+import { Show, createResource } from "solid-js";
+import type * as v from "valibot";
+import { useCMS } from "../store";
 import { SchemaForm } from "./SchemaForm";
 
 interface EditorProps {
-  collection: CollectionConfig;
+  schema: v.GenericSchema;
   collectionKey: string;
   itemId: string;
 }
@@ -15,6 +16,10 @@ export function Editor(props: EditorProps) {
   const [state, actions] = useCMS();
 
   const isNew = () => props.itemId === "__new__";
+
+  // Capitalize collection name for display
+  const displayName = () =>
+    props.collectionKey.charAt(0).toUpperCase() + props.collectionKey.slice(1);
 
   // Load item data if editing existing
   const [itemData] = createResource(
@@ -31,8 +36,8 @@ export function Editor(props: EditorProps) {
 
     // If was new, switch to editing the created item
     if (isNew()) {
-      const filenameField = props.collection.filenameField || "slug";
-      const id = data[filenameField] as string;
+      // Use slug or id field for the filename
+      const id = (data.slug ?? data.id) as string;
       if (id) {
         actions.setCurrentItem(id);
       }
@@ -47,7 +52,7 @@ export function Editor(props: EditorProps) {
     <div class="editor">
       <div class="editor-header">
         <h2 class="editor-title">
-          {isNew() ? `New ${props.collection.name}` : `Edit ${props.collection.name}`}
+          {isNew() ? `New ${displayName()}` : `Edit ${displayName()}`}
         </h2>
       </div>
 
@@ -64,7 +69,7 @@ export function Editor(props: EditorProps) {
       <Show when={isNew() || itemData()} keyed>
         {(data) => (
           <SchemaForm
-            schema={props.collection.schema.schema}
+            schema={props.schema}
             initialData={isNew() ? undefined : (data as any)?.data}
             onSubmit={handleSubmit}
             onCancel={handleCancel}

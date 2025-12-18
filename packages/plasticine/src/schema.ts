@@ -4,6 +4,118 @@ import * as v from "valibot";
  * Schema versioning system with automatic migrations
  */
 
+// =============================================================================
+// Config Types
+// =============================================================================
+
+export interface MediaConfig {
+  path: string;
+}
+
+export interface PlasticineConfig {
+  media?: MediaConfig;
+  schemas: Record<string, v.GenericSchema>;
+}
+
+export interface VersionedConfig {
+  /** Current config */
+  config: PlasticineConfig;
+  /** All versions (oldest first) */
+  versions: PlasticineConfig[];
+  /** Migration functions (oldest first) */
+  migrations: Array<(old: any) => any>;
+
+  /** Add a new version with migration */
+  version(
+    newConfig: PlasticineConfig,
+    migrate: (old: any) => any
+  ): VersionedConfig;
+
+  /** Parse content data for a collection, migrating if needed */
+  parseCollection(collection: string, data: unknown): unknown;
+
+  /** Get current schema for a collection */
+  getSchema(collection: string): v.GenericSchema | undefined;
+
+  /** Get all collection names */
+  getCollections(): string[];
+}
+
+/**
+ * Define a versioned CMS config
+ */
+export function defineConfig(config: PlasticineConfig): VersionedConfig {
+  return createVersionedConfig([config], []);
+}
+
+function createVersionedConfig(
+  versions: PlasticineConfig[],
+  migrations: Array<(old: any) => any>
+): VersionedConfig {
+  const current = versions[versions.length - 1];
+
+  return {
+    config: current,
+    versions,
+    migrations,
+
+    version(newConfig, migrate) {
+      return createVersionedConfig(
+        [...versions, newConfig],
+        [...migrations, migrate]
+      );
+    },
+
+    parseCollection(collection, data) {
+      const currentSchema = current.schemas[collection];
+      if (!currentSchema) {
+        throw new Error(`Unknown collection: ${collection}`);
+      }
+
+      // Try current schema first
+      const result = v.safeParse(currentSchema, data);
+      if (result.success) {
+        return result.output;
+      }
+
+      // Try older versions and migrate
+      for (let i = versions.length - 2; i >= 0; i--) {
+        const oldConfig = versions[i];
+
+        // Find which collection this data might belong to
+        // (could be renamed in later versions)
+        for (const [oldCollection, oldSchema] of Object.entries(oldConfig.schemas)) {
+          const oldResult = v.safeParse(oldSchema, data);
+          if (oldResult.success) {
+            // Migrate through all versions from i to current
+            let migratedData = { schemas: { [oldCollection]: oldResult.output } };
+            for (let j = i; j < migrations.length; j++) {
+              migratedData = migrations[j](migratedData);
+            }
+            // Find the data in the migrated structure
+            return migratedData.schemas[collection];
+          }
+        }
+      }
+
+      // No valid version found
+      throw new Error(`Data does not match any schema version for ${collection}`);
+    },
+
+    getSchema(collection) {
+      return current.schemas[collection];
+    },
+
+    getCollections() {
+      return Object.keys(current.schemas);
+    },
+  };
+}
+
+// =============================================================================
+// Legacy Schema API (for individual collection schemas)
+// =============================================================================
+
 class SchemaError<
   TSchema extends
     | v.BaseSchema<unknown, unknown, v.BaseIssue<unknown>>

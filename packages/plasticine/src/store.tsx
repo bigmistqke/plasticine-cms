@@ -1,32 +1,20 @@
 import { createSignal, createContext, useContext, type JSX } from "solid-js";
 import { createStore, produce } from "solid-js/store";
-import type * as v from "valibot";
 import {
   GitHubClient,
   tokenStorage,
   type GitHubConfig,
   type DeviceCodeResponse,
 } from "./github";
-import type { VersionedSchema } from "./schema";
+import type { VersionedConfig } from "./schema";
 
 /**
  * CMS Store Types
  */
 
-export interface CollectionConfig {
-  name: string;
-  schema: VersionedSchema<any, v.GenericSchema>;
-  filenameField?: string; // Field to use for filename, defaults to 'slug' or 'id'
-}
-
-export interface MediaConfig {
-  path: string; // Upload path relative to contentPath, default "uploads"
-}
-
-export interface CMSConfig {
+export interface CMSProps {
+  config: VersionedConfig;
   github: GitHubConfig;
-  collections: Record<string, CollectionConfig>;
-  media?: MediaConfig;
 }
 
 export interface ContentItem {
@@ -83,8 +71,11 @@ export type CMSStore = [CMSState, CMSActions];
 /**
  * Create the CMS store
  */
-export function createCMSStore(config: CMSConfig): CMSStore {
+export function createCMSStore(props: CMSProps): CMSStore {
+  const { config, github } = props;
   let client: GitHubClient | null = null;
+
+  const collections = config.getCollections();
 
   const [state, setState] = createStore<CMSState>({
     authenticated: false,
@@ -93,7 +84,7 @@ export function createCMSStore(config: CMSConfig): CMSStore {
     authError: null,
     deviceCode: null,
     collections: Object.fromEntries(
-      Object.keys(config.collections).map((name) => [
+      collections.map((name) => [
         name,
         { items: [], loading: false, error: null },
       ])
@@ -102,17 +93,12 @@ export function createCMSStore(config: CMSConfig): CMSStore {
     currentItem: null,
   });
 
-  const getFilenameField = (collection: string): string => {
-    return config.collections[collection]?.filenameField || "slug";
-  };
-
   const getFilename = (collection: string, data: Record<string, unknown>): string => {
-    const field = getFilenameField(collection);
-    const value = data[field];
+    // Use slug field if present, otherwise fallback to timestamp
+    const value = data.slug ?? data.id;
     if (typeof value === "string" && value) {
       return `${value}.json`;
     }
-    // Fallback to timestamp-based ID
     return `${Date.now()}.json`;
   };
 
@@ -122,7 +108,7 @@ export function createCMSStore(config: CMSConfig): CMSStore {
       setState("authError", null);
 
       try {
-        client = new GitHubClient(token, config.github);
+        client = new GitHubClient(token, github);
         const user = await client.getUser();
 
         tokenStorage.set(token);
@@ -164,8 +150,8 @@ export function createCMSStore(config: CMSConfig): CMSStore {
     async loadCollection(name: string) {
       if (!client) throw new Error("Not authenticated");
 
-      const collectionConfig = config.collections[name];
-      if (!collectionConfig) throw new Error(`Unknown collection: ${name}`);
+      const schema = config.getSchema(name);
+      if (!schema) throw new Error(`Unknown collection: ${name}`);
 
       setState("collections", name, "loading", true);
       setState("collections", name, "error", null);
@@ -178,8 +164,8 @@ export function createCMSStore(config: CMSConfig): CMSStore {
           if (file.type === "file" && file.name.endsWith(".json")) {
             try {
               const { data, sha } = await client.getJSON(name, file.name);
-              // Parse through versioned schema (auto-migrates)
-              const parsed = collectionConfig.schema.parse(data) as Record<string, unknown>;
+              // Parse through versioned config (auto-migrates)
+              const parsed = config.parseCollection(name, data) as Record<string, unknown>;
               items.push({
                 id: file.name.replace(".json", ""),
                 filename: file.name,
@@ -209,12 +195,12 @@ export function createCMSStore(config: CMSConfig): CMSStore {
     async getItem(collection: string, id: string): Promise<ContentItem> {
       if (!client) throw new Error("Not authenticated");
 
-      const collectionConfig = config.collections[collection];
-      if (!collectionConfig) throw new Error(`Unknown collection: ${collection}`);
+      const schema = config.getSchema(collection);
+      if (!schema) throw new Error(`Unknown collection: ${collection}`);
 
       const filename = `${id}.json`;
       const { data, sha } = await client.getJSON(collection, filename);
-      const parsed = collectionConfig.schema.parse(data) as Record<string, unknown>;
+      const parsed = config.parseCollection(collection, data) as Record<string, unknown>;
 
       return {
         id,
@@ -227,11 +213,11 @@ export function createCMSStore(config: CMSConfig): CMSStore {
     async saveItem(collection: string, data: Record<string, unknown>, existingSha?: string) {
       if (!client) throw new Error("Not authenticated");
 
-      const collectionConfig = config.collections[collection];
-      if (!collectionConfig) throw new Error(`Unknown collection: ${collection}`);
+      const schema = config.getSchema(collection);
+      if (!schema) throw new Error(`Unknown collection: ${collection}`);
 
       // Validate data against current schema
-      const parsed = collectionConfig.schema.parse(data) as Record<string, unknown>;
+      const parsed = config.parseCollection(collection, data) as Record<string, unknown>;
       const filename = getFilename(collection, parsed);
       const message = existingSha
         ? `Update ${collection}/${filename}`
@@ -280,7 +266,7 @@ export function createCMSStore(config: CMSConfig): CMSStore {
 
     async uploadFile(file: File, fieldPath?: string): Promise<string> {
       if (!client) throw new Error("Not authenticated");
-      const basePath = config.media?.path || "uploads";
+      const basePath = config.config.media?.path || "uploads";
       const uploadPath = fieldPath ? `${basePath}/${fieldPath}` : basePath;
       const { url } = await client.uploadFile(file, uploadPath);
       return url;
@@ -313,10 +299,11 @@ export function createCMSStore(config: CMSConfig): CMSStore {
 const CMSContext = createContext<CMSStore>();
 
 export function CMSProvider(props: {
-  config: CMSConfig;
+  config: VersionedConfig;
+  github: GitHubConfig;
   children: JSX.Element;
 }) {
-  const store = createCMSStore(props.config);
+  const store = createCMSStore({ config: props.config, github: props.github });
 
   return (
     <CMSContext.Provider value={store}>{props.children}</CMSContext.Provider>

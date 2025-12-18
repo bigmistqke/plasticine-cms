@@ -1,8 +1,7 @@
 import { For, Show, createSignal } from "solid-js";
-import { useCMS, type CollectionConfig } from "../store";
+import { useCMS } from "../store";
 
 interface ItemListProps {
-  collection: CollectionConfig;
   collectionKey: string;
 }
 
@@ -15,6 +14,10 @@ export function ItemList(props: ItemListProps) {
 
   const collectionState = () => state.collections[props.collectionKey];
   const items = () => collectionState()?.items || [];
+
+  // Capitalize collection name for display
+  const displayName = () =>
+    props.collectionKey.charAt(0).toUpperCase() + props.collectionKey.slice(1);
 
   const getItemTitle = (data: Record<string, unknown>): string => {
     return (
@@ -39,7 +42,7 @@ export function ItemList(props: ItemListProps) {
   return (
     <div class="item-list">
       <div class="item-list-header">
-        <h2 class="item-list-title">{props.collection.name}</h2>
+        <h2 class="item-list-title">{displayName()}</h2>
         <button
           class="btn btn-primary"
           onClick={() => actions.setCurrentItem("__new__")}

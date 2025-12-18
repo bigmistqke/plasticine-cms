@@ -1,6 +1,6 @@
 // Core
-export { schema, getSchemaEntries, getSchemaMetadata } from "./schema";
-export type { VersionedSchema } from "./schema";
+export { defineConfig, schema, getSchemaEntries, getSchemaMetadata } from "./schema";
+export type { VersionedConfig, PlasticineConfig, MediaConfig, VersionedSchema } from "./schema";
 
 // Fields
 export {
@@ -36,13 +36,11 @@ export {
   useCMS,
 } from "./store";
 export type {
-  CMSConfig,
+  CMSProps,
   CMSState,
   CMSActions,
   CMSStore,
-  CollectionConfig,
   ContentItem,
-  MediaConfig,
 } from "./store";
 
 // Components

@@ -9,7 +9,8 @@
       "Bash(tree:*)",
       "Bash(ln:*)",
       "Bash(git commit:*)",
-      "Bash(node --experimental-strip-types:*)"
+      "Bash(node --experimental-strip-types:*)",
+      "Bash(git add:*)"
     ]
   }
 }

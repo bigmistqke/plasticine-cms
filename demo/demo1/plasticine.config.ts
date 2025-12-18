@@ -1,5 +1,5 @@
 import * as v from "valibot";
-import { schema } from "@plasticine/core/schema";
+import { defineConfig } from "@plasticine/core/schema";
 import {
   boolean,
   date,
@@ -12,105 +12,74 @@ import {
   text,
   textarea,
 } from "@plasticine/core/fields";
-import type { CMSConfig, MediaConfig } from "@plasticine/core/store";
 
 /**
- * Authors collection
- */
-export const authors = schema(
-  v.object({
-    slug: slug({ label: "Slug" }),
-    name: text({ label: "Name", placeholder: "John Doe" }),
-    bio: optional(textarea({ label: "Bio", placeholder: "A short bio..." })),
-    avatar: optional(image({ label: "Avatar", path: "avatars" })),
-  })
-);
-
-/**
- * Posts collection with versioning
+ * Plasticine CMS Configuration
  *
- * Version 1: Basic post with title, slug, content
- * Version 2: Added author reference and draft status
+ * Single versioned config containing all schemas and settings.
+ * GitHub/runtime config comes from environment variables.
  */
-export const posts = schema(
-  v.object({
-    slug: slug({ label: "Slug" }),
-    title: text({ label: "Title", placeholder: "My awesome post" }),
-    content: markdown({ label: "Content" }),
-  })
-).version(
-  v.object({
-    slug: slug({ label: "Slug" }),
-    title: text({ label: "Title", placeholder: "My awesome post" }),
-    cover: optional(image({ label: "Cover Image" })),
-    content: markdown({ label: "Content" }),
-    author: optional(reference("authors", { label: "Author" })),
-    draft: boolean({ label: "Draft", description: "Keep this post as draft" }),
-    publishedAt: optional(date({ label: "Published Date" })),
-  }),
-  (old) => ({
-    slug: old.slug,
-    title: old.title,
-    cover: undefined,
-    content: old.content,
-    author: undefined,
-    draft: true,
-    publishedAt: undefined,
-  })
-);
-
-/**
- * Pages collection
- */
-export const pages = schema(
-  v.object({
-    slug: slug({ label: "Slug" }),
-    title: text({ label: "Title" }),
-    content: markdown({ label: "Content" }),
-    template: select(["default", "landing", "contact"] as const, {
-      label: "Template",
+export default defineConfig({
+  media: { path: "uploads" },
+  schemas: {
+    authors: v.object({
+      slug: slug({ label: "Slug" }),
+      name: text({ label: "Name", placeholder: "John Doe" }),
+      bio: optional(textarea({ label: "Bio", placeholder: "A short bio..." })),
+      avatar: optional(image({ label: "Avatar", path: "avatars" })),
     }),
-  })
-);
-
-/**
- * Media Configuration
- */
-export const media: MediaConfig = {
-  path: "uploads", // Relative to contentPath
-};
-
-/**
- * CMS Configuration
- *
- * To use this CMS:
- * 1. Create a Personal Access Token at https://github.com/settings/tokens/new?scopes=repo
- * 2. Configure your repo details below
- * 3. Paste your token when prompted in the UI
- */
-export const cmsConfig: CMSConfig = {
-  github: {
-    owner: "bigmistqke", // Replace with repo owner
-    repo: "plasticine-cms", // Replace with repo name
-    branch: "main",
-    contentPath: "content",
+    posts: v.object({
+      slug: slug({ label: "Slug" }),
+      title: text({ label: "Title", placeholder: "My awesome post" }),
+      content: markdown({ label: "Content" }),
+    }),
+    pages: v.object({
+      slug: slug({ label: "Slug" }),
+      title: text({ label: "Title" }),
+      content: markdown({ label: "Content" }),
+      template: select(["default", "landing", "contact"] as const, {
+        label: "Template",
+      }),
+    }),
   },
-  media,
-  collections: {
-    authors: {
-      name: "Authors",
-      schema: authors,
-      filenameField: "slug",
-    },
+}).version({
+  media: { path: "uploads" },
+  schemas: {
+    authors: v.object({
+      slug: slug({ label: "Slug" }),
+      name: text({ label: "Name", placeholder: "John Doe" }),
+      bio: optional(textarea({ label: "Bio", placeholder: "A short bio..." })),
+      avatar: optional(image({ label: "Avatar", path: "avatars" })),
+    }),
+    posts: v.object({
+      slug: slug({ label: "Slug" }),
+      title: text({ label: "Title", placeholder: "My awesome post" }),
+      cover: optional(image({ label: "Cover Image", path: "covers" })),
+      content: markdown({ label: "Content" }),
+      author: optional(reference("authors", { label: "Author" })),
+      draft: boolean({ label: "Draft", description: "Keep this post as draft" }),
+      publishedAt: optional(date({ label: "Published Date" })),
+    }),
+    pages: v.object({
+      slug: slug({ label: "Slug" }),
+      title: text({ label: "Title" }),
+      content: markdown({ label: "Content" }),
+      template: select(["default", "landing", "contact"] as const, {
+        label: "Template",
+      }),
+    }),
+  },
+}, (old) => ({
+  media: old.media,
+  schemas: {
+    authors: old.schemas.authors,
     posts: {
-      name: "Posts",
-      schema: posts,
-      filenameField: "slug",
+      ...old.schemas.posts,
+      cover: undefined,
+      author: undefined,
+      draft: true,
+      publishedAt: undefined,
     },
-    pages: {
-      name: "Pages",
-      schema: pages,
-      filenameField: "slug",
-    },
+    pages: old.schemas.pages,
   },
-};
+}));

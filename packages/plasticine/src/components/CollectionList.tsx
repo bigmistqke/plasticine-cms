@@ -1,8 +1,8 @@
 import { For } from "solid-js";
-import { useCMS, type CollectionConfig } from "../store";
+import { useCMS } from "../store";
 
 interface CollectionListProps {
-  collections: Record<string, CollectionConfig>;
+  collections: string[];
 }
 
 /**
@@ -16,18 +16,22 @@ export function CollectionList(props: CollectionListProps) {
     await actions.loadCollection(name);
   };
 
+  // Capitalize collection name for display
+  const displayName = (name: string) =>
+    name.charAt(0).toUpperCase() + name.slice(1);
+
   return (
     <nav class="collection-list">
       <h2 class="collection-list-title">Collections</h2>
       <ul class="collection-list-items">
-        <For each={Object.entries(props.collections)}>
-          {([name, config]) => (
+        <For each={props.collections}>
+          {(name) => (
             <li
               class="collection-list-item"
               classList={{ active: state.currentCollection === name }}
               onClick={() => handleSelect(name)}
             >
-              <span class="collection-name">{config.name}</span>
+              <span class="collection-name">{displayName(name)}</span>
               <span class="collection-count">
                 {state.collections[name]?.items.length || 0}
               </span>

@@ -1,23 +1,26 @@
 import { Show, Match, Switch } from "solid-js";
-import { useCMS, CMSProvider, type CMSConfig } from "../store";
+import { useCMS, CMSProvider } from "../store";
+import type { VersionedConfig } from "../schema";
+import type { GitHubConfig } from "../github";
 import { Auth } from "./Auth";
 import { CollectionList } from "./CollectionList";
 import { ItemList } from "./ItemList";
 import { Editor } from "./Editor";
 
-interface CMSAppProps {
-  config: CMSConfig;
+interface CMSProps {
+  config: VersionedConfig;
+  github: GitHubConfig;
 }
 
 /**
  * Main CMS layout component
  */
-function CMSLayout(props: { config: CMSConfig }) {
+function CMSLayout(props: { config: VersionedConfig }) {
   const [state, actions] = useCMS();
 
-  const currentCollectionConfig = () =>
+  const currentSchema = () =>
     state.currentCollection
-      ? props.config.collections[state.currentCollection]
+      ? props.config.getSchema(state.currentCollection)
       : null;
 
   return (
@@ -43,7 +46,7 @@ function CMSLayout(props: { config: CMSConfig }) {
       <div class="cms-body">
         {/* Sidebar */}
         <aside class="cms-sidebar">
-          <CollectionList collections={props.config.collections} />
+          <CollectionList collections={props.config.getCollections()} />
         </aside>
 
         {/* Main content */}
@@ -57,18 +60,17 @@ function CMSLayout(props: { config: CMSConfig }) {
             }
           >
             {/* Show editor when item is selected */}
-            <Match when={state.currentItem && currentCollectionConfig()}>
+            <Match when={state.currentItem && currentSchema()}>
               <Editor
-                collection={currentCollectionConfig()!}
+                schema={currentSchema()!}
                 collectionKey={state.currentCollection!}
                 itemId={state.currentItem!}
               />
             </Match>
 
             {/* Show item list when collection is selected */}
-            <Match when={state.currentCollection && currentCollectionConfig()}>
+            <Match when={state.currentCollection}>
               <ItemList
-                collection={currentCollectionConfig()!}
                 collectionKey={state.currentCollection!}
               />
             </Match>
@@ -82,15 +84,15 @@ function CMSLayout(props: { config: CMSConfig }) {
 /**
  * Full CMS application with auth gate
  */
-export function CMS(props: CMSAppProps) {
+export function CMS(props: CMSProps) {
   return (
-    <CMSProvider config={props.config}>
+    <CMSProvider config={props.config} github={props.github}>
       <CMSInner config={props.config} />
     </CMSProvider>
   );
 }
 
-function CMSInner(props: { config: CMSConfig }) {
+function CMSInner(props: { config: VersionedConfig }) {
   const [state] = useCMS();
 
   return (
