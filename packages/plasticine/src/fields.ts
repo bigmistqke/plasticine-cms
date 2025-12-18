@@ -27,8 +27,8 @@ export interface FieldMetadata {
 }
 
 // Helper to create metadata
-function uiMeta<T extends FieldMetadata>(meta: T) {
-  return { _plasticine: meta };
+function meta<T extends FieldMetadata>(meta: T) {
+  return { "~plasticine": meta };
 }
 
 /**
@@ -42,7 +42,7 @@ export function text(options?: {
 }) {
   const schema = v.pipe(
     v.string(),
-    v.metadata(uiMeta({
+    v.metadata(meta({
       ui: "text" as const,
       label: options?.label,
       placeholder: options?.placeholder,
@@ -51,21 +51,21 @@ export function text(options?: {
 
   // Add length constraints if specified
   if (options?.minLength !== undefined && options?.maxLength !== undefined) {
-    return v.pipe(v.string(), v.minLength(options.minLength), v.maxLength(options.maxLength), v.metadata(uiMeta({
+    return v.pipe(v.string(), v.minLength(options.minLength), v.maxLength(options.maxLength), v.metadata(meta({
       ui: "text" as const,
       label: options?.label,
       placeholder: options?.placeholder,
     })));
   }
   if (options?.minLength !== undefined) {
-    return v.pipe(v.string(), v.minLength(options.minLength), v.metadata(uiMeta({
+    return v.pipe(v.string(), v.minLength(options.minLength), v.metadata(meta({
       ui: "text" as const,
       label: options?.label,
       placeholder: options?.placeholder,
     })));
   }
   if (options?.maxLength !== undefined) {
-    return v.pipe(v.string(), v.maxLength(options.maxLength), v.metadata(uiMeta({
+    return v.pipe(v.string(), v.maxLength(options.maxLength), v.metadata(meta({
       ui: "text" as const,
       label: options?.label,
       placeholder: options?.placeholder,
@@ -84,7 +84,7 @@ export function textarea(options?: {
 }) {
   return v.pipe(
     v.string(),
-    v.metadata(uiMeta({
+    v.metadata(meta({
       ui: "textarea" as const,
       label: options?.label,
       placeholder: options?.placeholder,
@@ -101,7 +101,7 @@ export function markdown(options?: {
 }) {
   return v.pipe(
     v.string(),
-    v.metadata(uiMeta({
+    v.metadata(meta({
       ui: "markdown" as const,
       label: options?.label,
       placeholder: options?.placeholder,
@@ -120,7 +120,7 @@ export function number(options?: {
 }) {
   return v.pipe(
     v.number(),
-    v.metadata(uiMeta({
+    v.metadata(meta({
       ui: "number" as const,
       label: options?.label,
       min: options?.min,
@@ -139,7 +139,7 @@ export function boolean(options?: {
 }) {
   return v.pipe(
     v.boolean(),
-    v.metadata(uiMeta({
+    v.metadata(meta({
       ui: "boolean" as const,
       label: options?.label,
       description: options?.description,
@@ -156,7 +156,7 @@ export function date(options?: {
   return v.pipe(
     v.string(),
     v.isoDate(),
-    v.metadata(uiMeta({
+    v.metadata(meta({
       ui: "date" as const,
       label: options?.label,
     }))
@@ -172,7 +172,7 @@ export function datetime(options?: {
   return v.pipe(
     v.string(),
     v.isoTimestamp(),
-    v.metadata(uiMeta({
+    v.metadata(meta({
       ui: "datetime" as const,
       label: options?.label,
     }))
@@ -189,7 +189,7 @@ export function slug(options?: {
   return v.pipe(
     v.string(),
     v.regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Must be a valid slug (lowercase, hyphens only)"),
-    v.metadata(uiMeta({
+    v.metadata(meta({
       ui: "slug" as const,
       label: options?.label,
       placeholder: options?.placeholder || "my-slug",
@@ -207,7 +207,7 @@ export function image(options?: {
 }) {
   return v.pipe(
     v.string(),
-    v.metadata(uiMeta({
+    v.metadata(meta({
       ui: "image" as const,
       label: options?.label,
       accept: options?.accept || "image/*",
@@ -226,7 +226,7 @@ export function file(options?: {
 }) {
   return v.pipe(
     v.string(),
-    v.metadata(uiMeta({
+    v.metadata(meta({
       ui: "file" as const,
       label: options?.label,
       accept: options?.accept,
@@ -246,7 +246,7 @@ export function select<T extends string>(
 ) {
   return v.pipe(
     v.picklist(selectOptions),
-    v.metadata(uiMeta({
+    v.metadata(meta({
       ui: "select" as const,
       label: config?.label,
       options: selectOptions,
@@ -265,7 +265,7 @@ export function reference<T extends string>(
 ) {
   return v.pipe(
     v.string(),
-    v.metadata(uiMeta({
+    v.metadata(meta({
       ui: "reference" as const,
       label: options?.label,
       collection,
@@ -273,9 +273,3 @@ export function reference<T extends string>(
   );
 }
 
-/**
- * Optional wrapper that preserves metadata
- */
-export function optional<T extends v.GenericSchema>(schema: T) {
-  return v.optional(schema);
-}
