@@ -1,6 +1,6 @@
-import { Show, createResource } from "solid-js";
+import { Show } from "solid-js";
 import type * as v from "valibot";
-import { useCMS } from "../store";
+import { useCMS, type ContentItem } from "../store";
 import { SchemaForm } from "./SchemaForm";
 
 interface EditorProps {
@@ -21,17 +21,15 @@ export function Editor(props: EditorProps) {
   const displayName = () =>
     props.collectionKey.charAt(0).toUpperCase() + props.collectionKey.slice(1);
 
-  // Load item data if editing existing
-  const [itemData] = createResource(
-    () => (isNew() ? null : { collection: props.collectionKey, id: props.itemId }),
-    async (params) => {
-      if (!params) return null;
-      return actions.getItem(params.collection, params.id);
-    }
-  );
+  // Get item from already-loaded collection data
+  const itemData = (): ContentItem | undefined => {
+    if (isNew()) return undefined;
+    const collection = state.collections[props.collectionKey];
+    return collection?.items.find((item) => item.id === props.itemId);
+  };
 
   const handleSubmit = async (data: Record<string, unknown>) => {
-    const existingSha = isNew() ? undefined : itemData()?.sha;
+    const existingSha = itemData()?.sha;
     await actions.saveItem(props.collectionKey, data, existingSha);
 
     // If was new, switch to editing the created item
@@ -56,21 +54,11 @@ export function Editor(props: EditorProps) {
         </h2>
       </div>
 
-      <Show when={itemData.loading}>
-        <div class="editor-loading">Loading...</div>
-      </Show>
-
-      <Show when={itemData.error}>
-        <div class="editor-error">
-          Failed to load: {itemData.error?.message}
-        </div>
-      </Show>
-
-      <Show when={isNew() || itemData()} keyed>
+      <Show when={isNew() ? props.itemId : itemData()} keyed>
         {(data) => (
           <SchemaForm
             schema={props.schema}
-            initialData={isNew() ? undefined : (data as any)?.data}
+            initialData={isNew() ? undefined : (data as ContentItem).data}
             onSubmit={handleSubmit}
             onCancel={handleCancel}
             submitLabel={isNew() ? "Create" : "Save"}
