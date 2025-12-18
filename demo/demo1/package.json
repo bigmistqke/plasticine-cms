@@ -1,0 +1,24 @@
+{
+  "name": "@plasticine/demo1",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Plasticine CMS demo project",
+  "type": "module",
+  "scripts": {
+    "start": "vite",
+    "dev": "vite",
+    "build": "vite build",
+    "serve": "vite preview"
+  },
+  "devDependencies": {
+    "solid-devtools": "^0.34.3",
+    "typescript": "^5.7.2",
+    "vite": "^7.1.4",
+    "vite-plugin-solid": "^2.11.8"
+  },
+  "dependencies": {
+    "@plasticine/core": "workspace:*",
+    "solid-js": "^1.9.5",
+    "valibot": "^1.2.0"
+  }
+}

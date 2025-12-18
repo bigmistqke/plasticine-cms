@@ -52,6 +52,3 @@ export { ItemList } from "./components/ItemList";
 export { Editor } from "./components/Editor";
 export { SchemaForm } from "./components/SchemaForm";
 export { DynamicField } from "./components/DynamicField";
-
-// Styles
-import "./styles.css";

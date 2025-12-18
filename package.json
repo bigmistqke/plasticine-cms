@@ -1,24 +1,16 @@
 {
-  "name": "vite-template-solid",
-  "version": "0.0.0",
-  "description": "",
+  "name": "plasticine",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Git-based CMS with schema migrations",
   "type": "module",
   "scripts": {
-    "start": "vite",
-    "dev": "vite",
-    "build": "vite build",
-    "serve": "vite preview"
+    "cli": "tsx packages/cli/src/index.ts",
+    "migrate": "tsx packages/cli/src/index.ts migrate",
+    "migrate:dry": "tsx packages/cli/src/index.ts migrate --dry-run"
   },
   "license": "MIT",
   "devDependencies": {
-    "solid-devtools": "^0.34.3",
-    "typescript": "^5.7.2",
-    "vite": "^7.1.4",
-    "vite-plugin-solid": "^2.11.8"
-  },
-  "dependencies": {
-    "@formisch/solid": "^0.7.5",
-    "solid-js": "^1.9.5",
-    "valibot": "^1.2.0"
+    "tsx": "^4.21.0"
   }
 }

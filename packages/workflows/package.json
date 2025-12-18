@@ -1,0 +1,6 @@
+{
+  "name": "@plasticine/workflows",
+  "version": "0.0.1",
+  "private": true,
+  "description": "GitHub Actions workflows for Plasticine CMS"
+}

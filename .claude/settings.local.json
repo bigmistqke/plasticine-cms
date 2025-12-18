@@ -2,7 +2,12 @@
   "permissions": {
     "allow": [
       "Bash(pnpm add:*)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(cli/node_modules/.bin/tsx:*)",
+      "Bash(pnpm migrate:dry:*)",
+      "Bash(pnpm install)",
+      "Bash(tree:*)",
+      "Bash(ln:*)"
     ]
   }
 }

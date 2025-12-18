@@ -1,0 +1,71 @@
+name: 'Plasticine Migrate'
+description: 'Migrate content to latest schema and commit changes'
+
+inputs:
+  config:
+    description: 'Path to plasticine.config.ts'
+    required: false
+    default: './src/plasticine.config.ts'
+  content:
+    description: 'Path to content directory'
+    required: false
+    default: './content'
+  pnpm-version:
+    description: 'pnpm version to use'
+    required: false
+    default: '10'
+  node-version:
+    description: 'Node.js version to use'
+    required: false
+    default: '22'
+  auto-commit:
+    description: 'Automatically commit migrated content'
+    required: false
+    default: 'true'
+
+outputs:
+  has_changes:
+    description: 'Whether content was migrated'
+    value: ${{ steps.changes.outputs.has_changes }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: ${{ inputs.pnpm-version }}
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: 'pnpm'
+
+    - name: Install dependencies
+      shell: bash
+      run: pnpm install
+
+    - name: Run migrations
+      shell: bash
+      run: pnpm migrate -c ${{ inputs.config }} -d ${{ inputs.content }}
+
+    - name: Check for changes
+      id: changes
+      shell: bash
+      run: |
+        if [[ -n $(git status --porcelain ${{ inputs.content }}) ]]; then
+          echo "has_changes=true" >> $GITHUB_OUTPUT
+        else
+          echo "has_changes=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Commit migrated content
+      if: steps.changes.outputs.has_changes == 'true' && inputs.auto-commit == 'true'
+      shell: bash
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git add ${{ inputs.content }}
+        git commit -m "Migrate content to latest schema"
+        git push

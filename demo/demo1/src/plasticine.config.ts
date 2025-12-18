@@ -1,4 +1,5 @@
 import * as v from "valibot";
+import { schema } from "@plasticine/core/schema";
 import {
   boolean,
   date,
@@ -6,13 +7,12 @@ import {
   markdown,
   optional,
   reference,
-  schema,
   select,
   slug,
   text,
   textarea,
-  type CMSConfig
-} from "./plasticine";
+} from "@plasticine/core/fields";
+import type { CMSConfig } from "@plasticine/core/store";
 
 /**
  * Authors collection
