@@ -1,8 +1,8 @@
 // Core
-export * from './schema'
+export * from './config/schema'
 
 // Fields
-export * from './fields'
+export * from './config/fields'
 
 // Backend
 export * from './backend/types'
@@ -14,8 +14,8 @@ export * from './backend/github'
 export * from './store'
 
 // Components
+export * from './CMS'
 export * from './components/Auth'
-export * from './components/CMS'
 export * from './components/CollectionList'
 export * from './components/Editor'
 export * from './components/FieldComponents'
@@ -23,3 +23,4 @@ export * from './components/ItemList'
 export * from './components/MediaLibrary'
 export * from './components/SchemaEditor'
 export * from './components/SchemaForm'
+

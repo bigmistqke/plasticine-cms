@@ -4,6 +4,16 @@
  * (e.g., MongoDB for content + S3 for media).
  */
 
+/**
+ * Backend factory interface - created by github(), mongodb(), etc.
+ */
+export interface BackendFactory {
+  createBackend(token: string): Backend;
+  getUser(
+    token: string,
+  ): Promise<{ login: string; avatar_url: string; name: string }>;
+}
+
 export interface ContentItem {
   id: string
   sha?: string // For backends that need version/etag tracking
