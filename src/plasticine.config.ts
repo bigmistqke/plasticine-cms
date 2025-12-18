@@ -42,6 +42,7 @@ export const posts = schema(
   v.object({
     slug: slug({ label: "Slug" }),
     title: text({ label: "Title", placeholder: "My awesome post" }),
+    cover: optional(image({ label: "Cover Image" })),
     content: markdown({ label: "Content" }),
     author: optional(reference("authors", { label: "Author" })),
     draft: boolean({ label: "Draft", description: "Keep this post as draft" }),
@@ -50,6 +51,7 @@ export const posts = schema(
   (old) => ({
     slug: old.slug,
     title: old.title,
+    cover: undefined,
     content: old.content,
     author: undefined,
     draft: true,

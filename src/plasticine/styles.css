@@ -473,6 +473,20 @@
   gap: 0.5rem;
 }
 
+.image-input-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.image-input-row .input {
+  flex: 1;
+}
+
+.upload-btn {
+  cursor: pointer;
+  white-space: nowrap;
+}
+
 .image-preview {
   max-width: 200px;
   max-height: 150px;

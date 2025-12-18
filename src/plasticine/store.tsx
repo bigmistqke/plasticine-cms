@@ -65,6 +65,9 @@ export interface CMSActions {
   saveItem(collection: string, data: Record<string, unknown>, existingSha?: string): Promise<void>;
   deleteItem(collection: string, id: string, sha: string): Promise<void>;
 
+  // Files
+  uploadFile(file: File): Promise<string>;
+
   // Navigation
   setCurrentCollection(name: string | null): void;
   setCurrentItem(id: string | null): void;
@@ -268,6 +271,12 @@ export function createCMSStore(config: CMSConfig): CMSStore {
           }
         })
       );
+    },
+
+    async uploadFile(file: File): Promise<string> {
+      if (!client) throw new Error("Not authenticated");
+      const { url } = await client.uploadFile(file);
+      return url;
     },
 
     setCurrentCollection(name: string | null) {

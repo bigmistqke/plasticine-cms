@@ -165,5 +165,9 @@ export function getSchemaMetadata(schema: v.GenericSchema): Record<string, unkno
       }
     }
   }
+  // Handle wrapped schemas (optional, nullable, etc.)
+  if ("wrapped" in schema && schema.wrapped) {
+    return getSchemaMetadata(schema.wrapped as v.GenericSchema);
+  }
   return {};
 }

@@ -1,5 +1,5 @@
 import { Field } from "@formisch/solid";
-import { Match, Switch, For, Show } from "solid-js";
+import { Match, Switch, For, Show, createSignal } from "solid-js";
 import type * as v from "valibot";
 import { getSchemaMetadata } from "../schema";
 import type { FieldMetadata, FieldUIType } from "../fields";
@@ -233,16 +233,56 @@ function SlugInput(props: InputProps) {
 }
 
 function ImageInput(props: InputProps) {
+  const [, actions] = useCMS();
+  const [uploading, setUploading] = createSignal(false);
+  let urlInputRef: HTMLInputElement | undefined;
+
   const value = () => props.field.input as string;
+  const accept = () => (props.metadata.accept as string) || "image/*";
+
+  const handleFileSelect = async (e: Event) => {
+    const input = e.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const url = await actions.uploadFile(file);
+      // Update the field value by setting the input and triggering change
+      if (urlInputRef) {
+        urlInputRef.value = url;
+        urlInputRef.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+    } catch (err) {
+      console.error("Upload failed:", err);
+      alert("Upload failed: " + (err instanceof Error ? err.message : "Unknown error"));
+    } finally {
+      setUploading(false);
+    }
+  };
+
   return (
     <div class="image-input">
-      <input
-        type="url"
-        class="input"
-        {...(props.field.props as Record<string, string>)}
-        value={value() ?? ""}
-        placeholder="https://example.com/image.jpg"
-      />
+      <div class="image-input-row">
+        <input
+          ref={urlInputRef}
+          type="url"
+          class="input"
+          {...(props.field.props as Record<string, string>)}
+          value={value() ?? ""}
+          placeholder="https://example.com/image.jpg"
+        />
+        <label class="btn btn-secondary upload-btn">
+          {uploading() ? "..." : "Upload"}
+          <input
+            type="file"
+            accept={accept()}
+            onChange={handleFileSelect}
+            style={{ display: "none" }}
+            disabled={uploading()}
+          />
+        </label>
+      </div>
       <Show when={value()}>
         <img
           src={value()}

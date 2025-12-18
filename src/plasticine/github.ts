@@ -256,6 +256,65 @@ export class GitHubClient {
   }
 
   /**
+   * Upload a binary file (image, etc.)
+   * Returns the raw GitHub URL for the uploaded file
+   */
+  async uploadFile(
+    file: File,
+    folder: string = "uploads"
+  ): Promise<{ url: string; sha: string }> {
+    // Generate unique filename
+    const timestamp = Date.now();
+    const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+    const filename = `${timestamp}-${safeName}`;
+    const path = `${this.config.contentPath}/${folder}/${filename}`;
+
+    // Convert file to base64
+    const base64 = await this.fileToBase64(file);
+
+    const url = `${GITHUB_API}/repos/${this.config.owner}/${this.config.repo}/contents/${path}`;
+
+    const response = await fetch(url, {
+      method: "PUT",
+      headers: this.headers,
+      body: JSON.stringify({
+        message: `Upload ${file.name}`,
+        content: base64,
+        branch: this.config.branch,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(`Failed to upload file: ${error.message || response.statusText}`);
+    }
+
+    const data = await response.json();
+
+    // Return raw GitHub URL for the file
+    const rawUrl = `https://raw.githubusercontent.com/${this.config.owner}/${this.config.repo}/${this.config.branch}/${path}`;
+
+    return { url: rawUrl, sha: data.content.sha };
+  }
+
+  /**
+   * Convert File to base64 string (without data URL prefix)
+   */
+  private fileToBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        // Remove data URL prefix (e.g., "data:image/png;base64,")
+        const base64 = result.split(",")[1];
+        resolve(base64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  /**
    * Delete a file
    */
   async deleteFile(
