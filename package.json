@@ -4,6 +4,9 @@
   "private": true,
   "description": "Git-based CMS with schema migrations",
   "type": "module",
+  "scripts": {
+    "typecheck": "pnpm --filter @plasticine/core exec tsc --noEmit"
+  },
   "engines": {
     "node": ">=24"
   },
