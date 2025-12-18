@@ -118,7 +118,19 @@ function CMSInner(props: { config: VersionedConfig }) {
 
   return (
     <Show when={state.authenticated} fallback={<Auth />}>
-      <CMSLayout config={props.config} />
+      <Show
+        when={!state.dataLoading}
+        fallback={
+          <div class="cms-loading">
+            <div class="cms-loading-content">
+              <h2>Loading...</h2>
+              <p>Fetching your content</p>
+            </div>
+          </div>
+        }
+      >
+        <CMSLayout config={props.config} />
+      </Show>
     </Show>
   );
 }

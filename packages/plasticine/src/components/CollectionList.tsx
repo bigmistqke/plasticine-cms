@@ -7,14 +7,10 @@ interface CollectionListProps {
 
 /**
  * Sidebar list of available collections
+ * Data is already loaded on authentication
  */
 export function CollectionList(props: CollectionListProps) {
   const [state, actions] = useCMS();
-
-  const handleSelect = async (name: string) => {
-    actions.setCurrentCollection(name);
-    await actions.loadCollection(name);
-  };
 
   // Capitalize collection name for display
   const displayName = (name: string) =>
@@ -29,7 +25,7 @@ export function CollectionList(props: CollectionListProps) {
             <li
               class="collection-list-item"
               classList={{ active: state.currentCollection === name }}
-              onClick={() => handleSelect(name)}
+              onClick={() => actions.setCurrentCollection(name)}
             >
               <span class="collection-name">{displayName(name)}</span>
               <span class="collection-count">

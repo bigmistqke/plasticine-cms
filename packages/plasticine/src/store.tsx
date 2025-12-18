@@ -54,6 +54,10 @@ export interface CMSState {
   authError: string | null;
   deviceCode: DeviceCodeResponse | null;
 
+  // Data loading (all collections + media)
+  dataLoading: boolean;
+  dataError: string | null;
+
   // Collections
   collections: Record<string, CollectionState>;
 
@@ -72,9 +76,10 @@ export interface CMSActions {
   startOAuth(): Promise<void>;
   logout(): void;
 
+  // Data
+  loadAllData(): Promise<void>;
+
   // Collections
-  loadCollection(name: string): Promise<void>;
-  getItem(collection: string, id: string): Promise<ContentItem>;
   saveItem(collection: string, data: Record<string, unknown>, existingSha?: string): Promise<void>;
   deleteItem(collection: string, id: string, sha: string): Promise<void>;
 
@@ -82,7 +87,6 @@ export interface CMSActions {
   uploadFile(file: File, fieldPath?: string): Promise<string>;
 
   // Media
-  loadMedia(): Promise<void>;
   deleteMedia(url: string, path: string, sha: string): Promise<void>;
   getMediaReferences(url: string): Array<{ collection: string; id: string; field: string }>;
 
@@ -101,7 +105,7 @@ export function createCMSStore(props: CMSProps): CMSStore {
   const { config, github } = props;
   let client: GitHubClient | null = null;
 
-  const collections = config.getCollections();
+  const collectionNames = config.getCollections();
 
   const [state, setState] = createStore<CMSState>({
     authenticated: false,
@@ -109,8 +113,10 @@ export function createCMSStore(props: CMSProps): CMSStore {
     authLoading: false,
     authError: null,
     deviceCode: null,
+    dataLoading: false,
+    dataError: null,
     collections: Object.fromEntries(
-      collections.map((name) => [
+      collectionNames.map((name) => [
         name,
         { items: [], loading: false, error: null },
       ])
@@ -148,6 +154,59 @@ export function createCMSStore(props: CMSProps): CMSStore {
     return `${Date.now()}.json`;
   };
 
+  /**
+   * Load a single collection's items
+   */
+  const loadCollection = async (name: string): Promise<ContentItem[]> => {
+    if (!client) throw new Error("Not authenticated");
+
+    const schema = config.getSchema(name);
+    if (!schema) throw new Error(`Unknown collection: ${name}`);
+
+    const files = await client.listCollection(name);
+    const items: ContentItem[] = [];
+
+    for (const file of files) {
+      if (file.type === "file" && file.name.endsWith(".json")) {
+        try {
+          const { data, sha } = await client.getJSON(name, file.name);
+          // Parse through versioned config (auto-migrates)
+          const parsed = config.parseCollection(name, data) as Record<string, unknown>;
+          items.push({
+            id: file.name.replace(".json", ""),
+            filename: file.name,
+            sha,
+            data: parsed,
+          });
+        } catch (e) {
+          console.error(`Failed to load ${file.name}:`, e);
+        }
+      }
+    }
+
+    return items;
+  };
+
+  /**
+   * Load all media files
+   */
+  const loadMedia = async (): Promise<MediaFile[]> => {
+    if (!client) throw new Error("Not authenticated");
+
+    const uploadsPath = `${github.contentPath || "content"}/uploads`;
+    const files = await client.listFolder(uploadsPath, true);
+
+    return files
+      .filter((f) => f.type === "file")
+      .map((f) => ({
+        name: f.name,
+        path: f.path,
+        sha: f.sha,
+        size: f.size,
+        url: `https://raw.githubusercontent.com/${github.owner}/${github.repo}/${github.branch || "main"}/${f.path}`,
+      }));
+  };
+
   const actions: CMSActions = {
     async loginWithToken(token: string) {
       setState("authLoading", true);
@@ -165,6 +224,9 @@ export function createCMSStore(props: CMSProps): CMSStore {
             s.authLoading = false;
           })
         );
+
+        // Load all data after authentication
+        await actions.loadAllData();
       } catch (error) {
         setState(
           produce((s) => {
@@ -189,71 +251,52 @@ export function createCMSStore(props: CMSProps): CMSStore {
         produce((s) => {
           s.authenticated = false;
           s.user = null;
+          s.dataLoading = false;
+          s.dataError = null;
+          // Reset collections
+          for (const name of collectionNames) {
+            s.collections[name] = { items: [], loading: false, error: null };
+          }
+          s.media = { files: [], loading: false, error: null };
         })
       );
     },
 
-    async loadCollection(name: string) {
+    async loadAllData() {
       if (!client) throw new Error("Not authenticated");
 
-      const schema = config.getSchema(name);
-      if (!schema) throw new Error(`Unknown collection: ${name}`);
-
-      setState("collections", name, "loading", true);
-      setState("collections", name, "error", null);
+      setState("dataLoading", true);
+      setState("dataError", null);
 
       try {
-        const files = await client.listCollection(name);
-        const items: ContentItem[] = [];
+        // Load all collections and media in parallel
+        const [collectionsData, mediaData] = await Promise.all([
+          Promise.all(collectionNames.map(async (name) => ({
+            name,
+            items: await loadCollection(name),
+          }))),
+          loadMedia(),
+        ]);
 
-        for (const file of files) {
-          if (file.type === "file" && file.name.endsWith(".json")) {
-            try {
-              const { data, sha } = await client.getJSON(name, file.name);
-              // Parse through versioned config (auto-migrates)
-              const parsed = config.parseCollection(name, data) as Record<string, unknown>;
-              items.push({
-                id: file.name.replace(".json", ""),
-                filename: file.name,
-                sha,
-                data: parsed,
-              });
-            } catch (e) {
-              console.error(`Failed to load ${file.name}:`, e);
+        // Update state with all data
+        setState(
+          produce((s) => {
+            for (const { name, items } of collectionsData) {
+              s.collections[name].items = items;
             }
-          }
-        }
-
-        setState("collections", name, "items", items);
-        setState("collections", name, "loading", false);
+            s.media.files = mediaData;
+            s.dataLoading = false;
+          })
+        );
       } catch (error) {
         setState(
           produce((s) => {
-            s.collections[name].loading = false;
-            s.collections[name].error =
-              error instanceof Error ? error.message : "Failed to load collection";
+            s.dataLoading = false;
+            s.dataError = error instanceof Error ? error.message : "Failed to load data";
           })
         );
         throw error;
       }
-    },
-
-    async getItem(collection: string, id: string): Promise<ContentItem> {
-      if (!client) throw new Error("Not authenticated");
-
-      const schema = config.getSchema(collection);
-      if (!schema) throw new Error(`Unknown collection: ${collection}`);
-
-      const filename = `${id}.json`;
-      const { data, sha } = await client.getJSON(collection, filename);
-      const parsed = config.parseCollection(collection, data) as Record<string, unknown>;
-
-      return {
-        id,
-        filename,
-        sha,
-        data: parsed,
-      };
     },
 
     async saveItem(collection: string, data: Record<string, unknown>, existingSha?: string) {
@@ -313,47 +356,33 @@ export function createCMSStore(props: CMSProps): CMSStore {
     async uploadFile(file: File, fieldPath?: string): Promise<string> {
       if (!client) throw new Error("Not authenticated");
       const uploadPath = fieldPath ? `uploads/${fieldPath}` : "uploads";
-      const { url } = await client.uploadFile(file, uploadPath);
+      const { url, sha } = await client.uploadFile(file, uploadPath);
+
+      // Add to media state immediately
+      const uploadsPath = `${github.contentPath || "content"}/${uploadPath}`;
+      const timestamp = url.match(/\/(\d+)-[^/]+$/)?.[1] || Date.now().toString();
+      const filename = url.split("/").pop() || "";
+      setState(
+        "media",
+        "files",
+        produce((files) => {
+          files.push({
+            name: filename,
+            path: `${uploadsPath}/${filename}`,
+            sha,
+            size: 0, // Size unknown for new uploads
+            url,
+          });
+        })
+      );
+
       return url;
-    },
-
-    async loadMedia(): Promise<void> {
-      if (!client) throw new Error("Not authenticated");
-
-      setState("media", "loading", true);
-      setState("media", "error", null);
-
-      try {
-        const uploadsPath = `${github.contentPath || "content"}/uploads`;
-        const files = await client.listFolder(uploadsPath, true);
-
-        const mediaFiles: MediaFile[] = files
-          .filter((f) => f.type === "file")
-          .map((f) => ({
-            name: f.name,
-            path: f.path,
-            sha: f.sha,
-            size: f.size,
-            url: `https://raw.githubusercontent.com/${github.owner}/${github.repo}/${github.branch || "main"}/${f.path}`,
-          }));
-
-        setState("media", "files", mediaFiles);
-        setState("media", "loading", false);
-      } catch (error) {
-        setState(
-          produce((s) => {
-            s.media.loading = false;
-            s.media.error = error instanceof Error ? error.message : "Failed to load media";
-          })
-        );
-        throw error;
-      }
     },
 
     getMediaReferences(url: string): Array<{ collection: string; id: string; field: string }> {
       const references: Array<{ collection: string; id: string; field: string }> = [];
 
-      for (const collectionName of collections) {
+      for (const collectionName of collectionNames) {
         const mediaFields = getMediaFields(collectionName);
         const items = state.collections[collectionName]?.items || [];
 
@@ -372,14 +401,7 @@ export function createCMSStore(props: CMSProps): CMSStore {
     async deleteMedia(url: string, path: string, sha: string): Promise<void> {
       if (!client) throw new Error("Not authenticated");
 
-      // Ensure all collections are loaded before checking references
-      for (const collectionName of collections) {
-        if (state.collections[collectionName]?.items.length === 0 && !state.collections[collectionName]?.loading) {
-          await actions.loadCollection(collectionName);
-        }
-      }
-
-      // Find and update all references
+      // Find and update all references (collections are already loaded)
       const references = actions.getMediaReferences(url);
 
       for (const ref of references) {

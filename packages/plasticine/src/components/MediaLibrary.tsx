@@ -1,27 +1,13 @@
-import { For, Show, createSignal, onMount } from "solid-js";
+import { For, Show, createSignal } from "solid-js";
 import { useCMS, type MediaFile } from "../store";
 
 /**
  * Media library for viewing and managing uploaded files
+ * Data is already loaded on authentication, no lazy loading needed
  */
 export function MediaLibrary() {
   const [state, actions] = useCMS();
   const [deleting, setDeleting] = createSignal<string | null>(null);
-  const [collectionsLoaded, setCollectionsLoaded] = createSignal(false);
-
-  onMount(async () => {
-    // Load media files
-    await actions.loadMedia();
-
-    // Load all collections to get accurate reference counts
-    const collections = Object.keys(state.collections);
-    for (const name of collections) {
-      if (state.collections[name]?.items.length === 0) {
-        await actions.loadCollection(name);
-      }
-    }
-    setCollectionsLoaded(true);
-  });
 
   const isImage = (name: string) => {
     return /\.(jpg|jpeg|png|gif|webp|svg|ico)$/i.test(name);

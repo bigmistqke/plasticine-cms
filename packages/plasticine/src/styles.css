@@ -275,6 +275,24 @@
   color: var(--color-text-muted);
 }
 
+.cms-loading {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg);
+}
+
+.cms-loading-content {
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+.cms-loading-content h2 {
+  margin: 0 0 0.5rem;
+  color: var(--color-text);
+}
+
 /* Collection List */
 .collection-list {
   padding: 1rem 0;
