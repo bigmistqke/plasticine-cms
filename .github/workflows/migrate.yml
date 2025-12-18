@@ -1,1 +1,22 @@
-../../packages/workflows/src/migrate.yml
+# Plasticine CMS - Migrate Content Workflow
+
+name: Migrate Content
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'demo/demo1/plasticine/config.ts'
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Migrate content
+        uses: ./packages/workflows
+        with:
+          root: demo/demo1
