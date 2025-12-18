@@ -36,7 +36,18 @@ export interface MediaBackend {
   deleteFile(path: string, sha?: string): Promise<void>;
 }
 
+export interface FileContent {
+  content: string;
+  sha?: string;
+}
+
+export interface FilesBackend {
+  readFile(path: string): Promise<FileContent>;
+  writeFile(path: string, content: string, sha?: string): Promise<{ sha?: string }>;
+}
+
 export interface Backend {
   content: ContentBackend;
   media: MediaBackend;
+  files: FilesBackend;
 }

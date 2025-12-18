@@ -6,10 +6,12 @@ import { CollectionList } from "./CollectionList";
 import { ItemList } from "./ItemList";
 import { Editor } from "./Editor";
 import { MediaLibrary } from "./MediaLibrary";
+import { SchemaEditor } from "./SchemaEditor";
 
 interface CMSProps {
   config: VersionedConfig;
   backend: BackendFactory;
+  schemaPath?: string;
 }
 
 /**
@@ -62,6 +64,20 @@ function CMSLayout(props: { config: VersionedConfig }) {
               </li>
             </ul>
           </nav>
+
+          {/* Schema section */}
+          <nav class="schema-nav">
+            <h2 class="schema-nav-title">Settings</h2>
+            <ul class="schema-nav-items">
+              <li
+                class="schema-nav-item"
+                classList={{ active: state.currentView === "schema" }}
+                onClick={() => actions.setCurrentView("schema")}
+              >
+                <span class="schema-nav-name">Schema</span>
+              </li>
+            </ul>
+          </nav>
         </aside>
 
         {/* Main content */}
@@ -74,6 +90,11 @@ function CMSLayout(props: { config: VersionedConfig }) {
               </div>
             }
           >
+            {/* Show schema editor */}
+            <Match when={state.currentView === "schema"}>
+              <SchemaEditor />
+            </Match>
+
             {/* Show media library */}
             <Match when={state.currentView === "media"}>
               <MediaLibrary />
@@ -106,7 +127,7 @@ function CMSLayout(props: { config: VersionedConfig }) {
  */
 export function CMS(props: CMSProps) {
   return (
-    <CMSProvider config={props.config} backend={props.backend}>
+    <CMSProvider config={props.config} backend={props.backend} schemaPath={props.schemaPath}>
       <CMSInner config={props.config} />
     </CMSProvider>
   );

@@ -20,6 +20,7 @@ export interface BackendFactory {
 export interface CMSProps {
   config: VersionedConfig;
   backend: BackendFactory;
+  schemaPath?: string;
 }
 
 // Re-export for convenience
@@ -34,6 +35,14 @@ export interface CollectionState {
 export interface MediaState {
   files: MediaFile[];
   loading: boolean;
+  error: string | null;
+}
+
+export interface SchemaState {
+  content: string;
+  sha: string | null;
+  loading: boolean;
+  saving: boolean;
   error: string | null;
 }
 
@@ -54,8 +63,11 @@ export interface CMSState {
   // Media
   media: MediaState;
 
+  // Schema
+  schema: SchemaState;
+
   // Navigation
-  currentView: "collections" | "media";
+  currentView: "collections" | "media" | "schema";
   currentCollection: string | null;
   currentItem: string | null;
 }
@@ -79,8 +91,12 @@ export interface CMSActions {
   deleteMedia(url: string, path: string, sha?: string): Promise<void>;
   getMediaReferences(url: string): Array<{ collection: string; id: string; field: string }>;
 
+  // Schema
+  loadSchema(): Promise<void>;
+  saveSchema(content: string): Promise<void>;
+
   // Navigation
-  setCurrentView(view: "collections" | "media"): void;
+  setCurrentView(view: "collections" | "media" | "schema"): void;
   setCurrentCollection(name: string | null): void;
   setCurrentItem(id: string | null): void;
 }
@@ -91,7 +107,7 @@ export type CMSStore = [CMSState, CMSActions];
  * Create the CMS store
  */
 export function createCMSStore(props: CMSProps): CMSStore {
-  const { config, backend: backendFactory } = props;
+  const { config, backend: backendFactory, schemaPath = "plasticine/config.ts" } = props;
   let backend: Backend | null = null;
 
   const collectionNames = config.getCollections();
@@ -110,6 +126,7 @@ export function createCMSStore(props: CMSProps): CMSStore {
       ])
     ),
     media: { files: [], loading: false, error: null },
+    schema: { content: "", sha: null, loading: false, saving: false, error: null },
     currentView: "collections",
     currentCollection: null,
     currentItem: null,
@@ -373,11 +390,66 @@ export function createCMSStore(props: CMSProps): CMSStore {
       );
     },
 
-    setCurrentView(view: "collections" | "media") {
+    async loadSchema() {
+      if (!backend) throw new Error("Not authenticated");
+
+      setState("schema", "loading", true);
+      setState("schema", "error", null);
+
+      try {
+        const { content, sha } = await backend.files.readFile(schemaPath);
+        setState(
+          produce((s) => {
+            s.schema.content = content;
+            s.schema.sha = sha || null;
+            s.schema.loading = false;
+          })
+        );
+      } catch (error) {
+        setState(
+          produce((s) => {
+            s.schema.loading = false;
+            s.schema.error = error instanceof Error ? error.message : "Failed to load schema";
+          })
+        );
+        throw error;
+      }
+    },
+
+    async saveSchema(content: string) {
+      if (!backend) throw new Error("Not authenticated");
+
+      setState("schema", "saving", true);
+      setState("schema", "error", null);
+
+      try {
+        const { sha } = await backend.files.writeFile(schemaPath, content, state.schema.sha || undefined);
+        setState(
+          produce((s) => {
+            s.schema.content = content;
+            s.schema.sha = sha || null;
+            s.schema.saving = false;
+          })
+        );
+      } catch (error) {
+        setState(
+          produce((s) => {
+            s.schema.saving = false;
+            s.schema.error = error instanceof Error ? error.message : "Failed to save schema";
+          })
+        );
+        throw error;
+      }
+    },
+
+    setCurrentView(view: "collections" | "media" | "schema") {
       setState("currentView", view);
-      if (view === "media") {
+      if (view === "media" || view === "schema") {
         setState("currentCollection", null);
         setState("currentItem", null);
+      }
+      if (view === "schema" && !state.schema.content && !state.schema.loading) {
+        actions.loadSchema();
       }
     },
 
@@ -411,9 +483,10 @@ const CMSContext = createContext<CMSStore>();
 export function CMSProvider(props: {
   config: VersionedConfig;
   backend: BackendFactory;
+  schemaPath?: string;
   children: JSX.Element;
 }) {
-  const store = createCMSStore({ config: props.config, backend: props.backend });
+  const store = createCMSStore({ config: props.config, backend: props.backend, schemaPath: props.schemaPath });
 
   return (
     <CMSContext.Provider value={store}>{props.children}</CMSContext.Provider>

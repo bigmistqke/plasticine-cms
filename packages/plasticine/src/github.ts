@@ -475,7 +475,7 @@ export const tokenStorage = {
  * Create a GitHub backend for Plasticine.
  * Returns { content, media } that both use the same GitHubClient.
  */
-import type { Backend, ContentBackend, MediaBackend, ContentItem, MediaFile } from "./backend";
+import type { Backend, ContentBackend, MediaBackend, FilesBackend, ContentItem, MediaFile } from "./backend";
 
 export interface GitHubBackendConfig extends GitHubConfig {
   token: string;
@@ -560,7 +560,50 @@ export function createGitHubBackend(config: GitHubBackendConfig): Backend {
     },
   };
 
-  return { content, media };
+  const files: FilesBackend = {
+    async readFile(path: string) {
+      const url = `https://api.github.com/repos/${config.owner}/${config.repo}/contents/${path}?ref=${branch}`;
+      const response = await fetch(url, {
+        headers: {
+          Accept: "application/vnd.github+json",
+          Authorization: `Bearer ${config.token}`,
+        },
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to read file: ${response.statusText}`);
+      }
+      const data = await response.json();
+      return {
+        content: atob(data.content),
+        sha: data.sha,
+      };
+    },
+
+    async writeFile(path: string, content: string, sha?: string) {
+      const url = `https://api.github.com/repos/${config.owner}/${config.repo}/contents/${path}`;
+      const response = await fetch(url, {
+        method: "PUT",
+        headers: {
+          Accept: "application/vnd.github+json",
+          Authorization: `Bearer ${config.token}`,
+        },
+        body: JSON.stringify({
+          message: `cms: Update ${path}`,
+          content: btoa(content),
+          branch,
+          ...(sha ? { sha } : {}),
+        }),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(`Failed to write file: ${error.message || response.statusText}`);
+      }
+      const data = await response.json();
+      return { sha: data.content.sha };
+    },
+  };
+
+  return { content, media, files };
 }
 
 /**

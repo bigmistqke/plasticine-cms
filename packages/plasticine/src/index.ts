@@ -21,7 +21,7 @@ export {
 export type { FieldMetadata, FieldUIType } from "./fields";
 
 // Backend
-export type { Backend, ContentBackend, MediaBackend, ContentItem, MediaFile } from "./backend";
+export type { Backend, ContentBackend, MediaBackend, FilesBackend, ContentItem, MediaFile } from "./backend";
 
 // GitHub backend
 export {
@@ -58,3 +58,4 @@ export { Editor } from "./components/Editor";
 export { SchemaForm } from "./components/SchemaForm";
 export { DynamicField } from "./components/DynamicField";
 export { MediaLibrary } from "./components/MediaLibrary";
+export { SchemaEditor } from "./components/SchemaEditor";
