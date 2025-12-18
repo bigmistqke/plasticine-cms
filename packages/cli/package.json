@@ -2,20 +2,22 @@
   "name": "@plasticine/cli",
   "version": "0.0.1",
   "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
   "bin": {
-    "plasticine": "./dist/index.js"
+    "plasticine": "./src/index.ts"
   },
   "exports": {
     ".": "./src/index.ts"
   },
   "scripts": {
-    "dev": "tsx src/index.ts"
+    "dev": "node --experimental-strip-types src/index.ts"
   },
   "dependencies": {
     "commander": "^12.1.0"
   },
   "devDependencies": {
-    "tsx": "^4.19.0",
-    "@types/node": "^22.0.0"
+    "@types/node": "^24.0.0"
   }
 }

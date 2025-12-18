@@ -4,13 +4,19 @@
   "private": true,
   "description": "Plasticine CMS demo project",
   "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "start": "vite",
     "dev": "vite",
     "build": "vite build",
-    "serve": "vite preview"
+    "serve": "vite preview",
+    "migrate": "plasticine migrate",
+    "migrate:dry": "plasticine migrate --dry-run"
   },
   "devDependencies": {
+    "@plasticine/cli": "workspace:*",
     "solid-devtools": "^0.34.3",
     "typescript": "^5.7.2",
     "vite": "^7.1.4",

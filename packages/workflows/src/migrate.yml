@@ -6,7 +6,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'demo/demo1/src/plasticine.config.ts'
+      - 'demo/demo1/plasticine.config.ts'
 
 jobs:
   migrate:
