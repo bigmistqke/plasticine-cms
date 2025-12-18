@@ -1,6 +1,6 @@
 // Core
 export { defineConfig, schema, getSchemaEntries, getSchemaMetadata } from "./schema";
-export type { VersionedConfig, PlasticineConfig, MediaConfig, VersionedSchema } from "./schema";
+export type { VersionedConfig, PlasticineConfig, VersionedSchema } from "./schema";
 
 // Fields
 export {

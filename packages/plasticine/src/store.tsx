@@ -266,8 +266,7 @@ export function createCMSStore(props: CMSProps): CMSStore {
 
     async uploadFile(file: File, fieldPath?: string): Promise<string> {
       if (!client) throw new Error("Not authenticated");
-      const basePath = config.config.media?.path || "uploads";
-      const uploadPath = fieldPath ? `${basePath}/${fieldPath}` : basePath;
+      const uploadPath = fieldPath ? `uploads/${fieldPath}` : "uploads";
       const { url } = await client.uploadFile(file, uploadPath);
       return url;
     },

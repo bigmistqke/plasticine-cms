@@ -20,7 +20,6 @@ import {
  * GitHub/runtime config comes from environment variables.
  */
 export default defineConfig({
-  media: { path: "uploads" },
   schemas: {
     authors: v.object({
       slug: slug({ label: "Slug" }),
@@ -43,7 +42,6 @@ export default defineConfig({
     }),
   },
 }).version({
-  media: { path: "uploads" },
   schemas: {
     authors: v.object({
       slug: slug({ label: "Slug" }),
@@ -70,7 +68,6 @@ export default defineConfig({
     }),
   },
 }, (old) => ({
-  media: old.media,
   schemas: {
     authors: old.schemas.authors,
     posts: {

@@ -8,12 +8,7 @@ import * as v from "valibot";
 // Config Types
 // =============================================================================
 
-export interface MediaConfig {
-  path: string;
-}
-
 export interface PlasticineConfig {
-  media?: MediaConfig;
   schemas: Record<string, v.GenericSchema>;
 }
 
