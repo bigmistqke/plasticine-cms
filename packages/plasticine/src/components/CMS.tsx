@@ -1,15 +1,15 @@
-import { Show, Match, Switch } from "solid-js";
-import { useCMS, CMSProvider, type BackendFactory } from "../store";
-import type { VersionedConfig } from "../schema";
+import { Match, Show, Switch } from "solid-js";
+import type { PlasticineConfig } from "../schema";
+import { CMSProvider, useCMS, type BackendFactory } from "../store";
 import { Auth } from "./Auth";
 import { CollectionList } from "./CollectionList";
-import { ItemList } from "./ItemList";
 import { Editor } from "./Editor";
+import { ItemList } from "./ItemList";
 import { MediaLibrary } from "./MediaLibrary";
 import { SchemaEditor } from "./SchemaEditor";
 
 interface CMSProps {
-  config: VersionedConfig;
+  config: PlasticineConfig;
   backend: BackendFactory;
   schemaPath?: string;
 }
@@ -17,7 +17,7 @@ interface CMSProps {
 /**
  * Main CMS layout component
  */
-function CMSLayout(props: { config: VersionedConfig }) {
+function CMSLayout(props: { config: PlasticineConfig }) {
   const [state, actions] = useCMS();
 
   const currentSchema = () =>
@@ -111,9 +111,7 @@ function CMSLayout(props: { config: VersionedConfig }) {
 
             {/* Show item list when collection is selected */}
             <Match when={state.currentCollection}>
-              <ItemList
-                collectionKey={state.currentCollection!}
-              />
+              <ItemList collectionKey={state.currentCollection!} />
             </Match>
           </Switch>
         </main>
@@ -127,13 +125,17 @@ function CMSLayout(props: { config: VersionedConfig }) {
  */
 export function CMS(props: CMSProps) {
   return (
-    <CMSProvider config={props.config} backend={props.backend} schemaPath={props.schemaPath}>
+    <CMSProvider
+      config={props.config}
+      backend={props.backend}
+      schemaPath={props.schemaPath}
+    >
       <CMSInner config={props.config} />
     </CMSProvider>
   );
 }
 
-function CMSInner(props: { config: VersionedConfig }) {
+function CMSInner(props: { config: PlasticineConfig }) {
   const [state] = useCMS();
 
   return (

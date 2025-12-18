@@ -1,27 +1,26 @@
 // Core
-export { defineConfig, schema, getSchemaEntries, getSchemaMetadata } from "./schema";
-export type { VersionedConfig, PlasticineConfig, VersionedSchema } from "./schema";
+export { defineConfig, getSchemaEntries, getSchemaMetadata, schema } from "./schema";
+export type { PlasticineConfig, VersionedSchema } from "./schema";
 
 // Fields
 export {
-  text,
-  textarea,
-  markdown,
-  number,
   boolean,
   date,
   datetime,
-  slug,
-  image,
   file,
-  select,
+  image,
+  markdown,
+  number,
   reference,
-  optional,
+  select,
+  slug,
+  text,
+  textarea,
 } from "./fields";
 export type { FieldMetadata, FieldUIType } from "./fields";
 
 // Backend
-export type { Backend, ContentBackend, MediaBackend, FilesBackend, ContentItem, MediaFile } from "./backend";
+export type { Backend, ConfigBackend as FilesBackend, ContentBackend, ContentItem, MediaBackend, MediaFile } from "./backend";
 
 // GitHub backend
 export {

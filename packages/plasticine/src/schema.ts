@@ -113,8 +113,8 @@ function createVersionedConfig(
 
 class SchemaError<
   TSchema extends
-    | v.BaseSchema<unknown, unknown, v.BaseIssue<unknown>>
-    | v.BaseSchemaAsync<unknown, unknown, v.BaseIssue<unknown>>
+  | v.BaseSchema<unknown, unknown, v.BaseIssue<unknown>>
+  | v.BaseSchemaAsync<unknown, unknown, v.BaseIssue<unknown>>
 > extends Error {
   readonly issues: Array<[v.InferIssue<TSchema>, ...v.InferIssue<TSchema>[]]>;
 
@@ -264,9 +264,9 @@ export function getSchemaMetadata(schema: v.GenericSchema): Record<string, unkno
     for (const item of schema.pipe) {
       if (item && typeof item === "object" && "type" in item && item.type === "metadata") {
         const metadata = (item as { metadata: Record<string, unknown> }).metadata;
-        // Check for our _plasticine wrapper
-        if (metadata && typeof metadata === "object" && "_plasticine" in metadata) {
-          return metadata._plasticine as Record<string, unknown>;
+        // Check for our ~plasticine wrapper
+        if (metadata && typeof metadata === "object" && "~plasticine" in metadata) {
+          return metadata["~plasticine"] as Record<string, unknown>;
         }
         return metadata || {};
       }

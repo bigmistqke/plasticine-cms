@@ -1,55 +1,24 @@
-import * as v from "valibot";
-import { defineConfig } from "@plasticine/core/schema";
-import {
-  boolean,
-  date,
-  image,
-  markdown,
-  optional,
-  reference,
-  select,
-  slug,
-  text,
-  textarea,
-} from "@plasticine/core/fields";
+import { boolean, date, image, markdown, reference, select, slug, text, textarea, } from "@plasticine/core/fields";
+import { defineConfig, schema } from "@plasticine/core/schema";
+import { array, object, optional } from "valibot";
 
-/**
- * Plasticine CMS Configuration
- *
- * Single versioned config containing all schemas and settings.
- * GitHub/runtime config comes from environment variables.
- */
 export default defineConfig({
-  schemas: {
-    authors: v.object({
+  authors: schema(
+    object({
       slug: slug({ label: "Slug" }),
       name: text({ label: "Name", placeholder: "John Doe" }),
       bio: optional(textarea({ label: "Bio", placeholder: "A short bio..." })),
       avatar: optional(image({ label: "Avatar", path: "avatars" })),
-    }),
-    posts: v.object({
+    })
+  ),
+  posts: schema(
+    object({
       slug: slug({ label: "Slug" }),
       title: text({ label: "Title", placeholder: "My awesome post" }),
       content: markdown({ label: "Content" }),
-    }),
-    pages: v.object({
-      slug: slug({ label: "Slug" }),
-      title: text({ label: "Title" }),
-      content: markdown({ label: "Content" }),
-      template: select(["default", "landing", "contact"] as const, {
-        label: "Template",
-      }),
-    }),
-  },
-}).version({
-  schemas: {
-    authors: v.object({
-      slug: slug({ label: "Slug" }),
-      name: text({ label: "Name", placeholder: "John Doe" }),
-      bio: optional(textarea({ label: "Bio", placeholder: "A short bio..." })),
-      avatar: optional(image({ label: "Avatar", path: "avatars" })),
-    }),
-    posts: v.object({
+    })
+  ).version(
+    object({
       slug: slug({ label: "Slug" }),
       title: text({ label: "Title", placeholder: "My awesome post" }),
       cover: optional(image({ label: "Cover Image", path: "covers" })),
@@ -57,26 +26,36 @@ export default defineConfig({
       author: optional(reference("authors", { label: "Author" })),
       draft: boolean({ label: "Draft", description: "Keep this post as draft" }),
       publishedAt: optional(date({ label: "Published Date" })),
+      images: array(
+        object({
+          src: image({ label: "Image", path: "posts" }),
+          alt: optional(text({ label: "Alt Text" })),
+          tags: array(
+            object({
+              name: text({ label: "Tag Name" }),
+            })
+          ),
+        })
+      ),
     }),
-    pages: v.object({
+    (old) => ({
+      ...old,
+      cover: undefined,
+      author: undefined,
+      draft: true,
+      publishedAt: undefined,
+      images: [],
+    })
+  ),
+  pages: schema(
+    object({
       slug: slug({ label: "Slug" }),
       title: text({ label: "Title" }),
       content: markdown({ label: "Content" }),
       template: select(["default", "landing", "contact"] as const, {
         label: "Template",
       }),
-    }),
-  },
-}, (old) => ({
-  schemas: {
-    authors: old.schemas.authors,
-    posts: {
-      ...old.schemas.posts,
-      cover: undefined,
-      author: undefined,
-      draft: true,
-      publishedAt: undefined,
-    },
-    pages: old.schemas.pages,
-  },
-}));
+    })
+  ),
+});
+

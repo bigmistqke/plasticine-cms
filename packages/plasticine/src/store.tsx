@@ -1,9 +1,9 @@
 import { createContext, useContext, type JSX } from "solid-js";
 import { createStore, produce } from "solid-js/store";
-import { tokenStorage } from "./github";
-import type { VersionedConfig } from "./schema";
-import { getSchemaEntries, getSchemaMetadata } from "./schema";
 import type { Backend, ContentItem, MediaFile } from "./backend";
+import { tokenStorage } from "./github";
+import type { PlasticineConfig } from "./schema";
+import { getSchemaEntries, getSchemaMetadata } from "./schema";
 
 /**
  * Backend factory interface - created by github(), mongodb(), etc.
@@ -18,7 +18,7 @@ export interface BackendFactory {
  */
 
 export interface CMSProps {
-  config: VersionedConfig;
+  config: PlasticineConfig;
   backend: BackendFactory;
   schemaPath?: string;
 }
@@ -397,7 +397,7 @@ export function createCMSStore(props: CMSProps): CMSStore {
       setState("schema", "error", null);
 
       try {
-        const { content, sha } = await backend.files.readFile(schemaPath);
+        const { content, sha } = await backend.config.readFile(schemaPath);
         setState(
           produce((s) => {
             s.schema.content = content;
@@ -423,7 +423,7 @@ export function createCMSStore(props: CMSProps): CMSStore {
       setState("schema", "error", null);
 
       try {
-        const { sha } = await backend.files.writeFile(schemaPath, content, state.schema.sha || undefined);
+        const { sha } = await backend.config.writeFile(schemaPath, content, state.schema.sha || undefined);
         setState(
           produce((s) => {
             s.schema.content = content;
@@ -481,7 +481,7 @@ export function createCMSStore(props: CMSProps): CMSStore {
 const CMSContext = createContext<CMSStore>();
 
 export function CMSProvider(props: {
-  config: VersionedConfig;
+  config: PlasticineConfig;
   backend: BackendFactory;
   schemaPath?: string;
   children: JSX.Element;
