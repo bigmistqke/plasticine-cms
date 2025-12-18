@@ -216,29 +216,61 @@ export class GitHubClient {
     const path = this.buildPath(collection, filename);
     const url = `${GITHUB_API}/repos/${this.config.owner}/${this.config.repo}/contents/${path}`;
 
-    const body: Record<string, string> = {
-      message,
-      content: btoa(content),
-      branch: this.config.branch!,
-    };
+    // Retry logic for 409 conflicts
+    const maxRetries = 3;
+    let currentSha = sha;
+    let lastError: Error | null = null;
 
-    if (sha) {
-      body.sha = sha;
-    }
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      if (attempt > 0) {
+        // Wait briefly before retry
+        await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
 
-    const response = await fetch(url, {
-      method: "PUT",
-      headers: this.headers,
-      body: JSON.stringify(body),
-    });
+        // If we have a SHA conflict, try to fetch the current SHA
+        if (currentSha) {
+          try {
+            const current = await this.getFile(collection, filename);
+            currentSha = current.sha;
+          } catch {
+            // File might not exist, continue without SHA
+            currentSha = undefined;
+          }
+        }
+      }
 
-    if (!response.ok) {
+      const body: Record<string, string> = {
+        message,
+        content: btoa(content),
+        branch: this.config.branch!,
+      };
+
+      if (currentSha) {
+        body.sha = currentSha;
+      }
+
+      const response = await fetch(url, {
+        method: "PUT",
+        headers: this.headers,
+        body: JSON.stringify(body),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return { sha: data.content.sha };
+      }
+
       const error = await response.json();
+
+      // Retry on 409 conflict
+      if (response.status === 409 && attempt < maxRetries - 1) {
+        lastError = new Error(error.message || response.statusText);
+        continue;
+      }
+
       throw new Error(`Failed to save file: ${error.message || response.statusText}`);
     }
 
-    const data = await response.json();
-    return { sha: data.content.sha };
+    throw lastError || new Error("Failed to save file after retries");
   }
 
   /**
@@ -274,27 +306,47 @@ export class GitHubClient {
 
     const url = `${GITHUB_API}/repos/${this.config.owner}/${this.config.repo}/contents/${path}`;
 
-    const response = await fetch(url, {
-      method: "PUT",
-      headers: this.headers,
-      body: JSON.stringify({
-        message: `Upload ${file.name}`,
-        content: base64,
-        branch: this.config.branch,
-      }),
-    });
+    // Retry logic for 409 conflicts (branch was updated by concurrent operation)
+    const maxRetries = 3;
+    let lastError: Error | null = null;
 
-    if (!response.ok) {
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      if (attempt > 0) {
+        // Wait briefly before retry to let GitHub settle
+        await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
+      }
+
+      const response = await fetch(url, {
+        method: "PUT",
+        headers: this.headers,
+        body: JSON.stringify({
+          message: `Upload ${file.name}`,
+          content: base64,
+          branch: this.config.branch,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+
+        // Return raw GitHub URL for the file
+        const rawUrl = `https://raw.githubusercontent.com/${this.config.owner}/${this.config.repo}/${this.config.branch}/${path}`;
+
+        return { url: rawUrl, sha: data.content.sha };
+      }
+
       const error = await response.json();
+
+      // Retry on 409 conflict (branch state changed)
+      if (response.status === 409 && attempt < maxRetries - 1) {
+        lastError = new Error(error.message || response.statusText);
+        continue;
+      }
+
       throw new Error(`Failed to upload file: ${error.message || response.statusText}`);
     }
 
-    const data = await response.json();
-
-    // Return raw GitHub URL for the file
-    const rawUrl = `https://raw.githubusercontent.com/${this.config.owner}/${this.config.repo}/${this.config.branch}/${path}`;
-
-    return { url: rawUrl, sha: data.content.sha };
+    throw lastError || new Error("Failed to upload file after retries");
   }
 
   /**
