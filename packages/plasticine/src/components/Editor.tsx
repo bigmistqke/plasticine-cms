@@ -1,3 +1,4 @@
+import { useNavigate } from "@solidjs/router";
 import { Show } from "solid-js";
 import type * as v from "valibot";
 import { useCMS, type ContentItem } from "../store";
@@ -14,6 +15,7 @@ interface EditorProps {
  */
 export function Editor(props: EditorProps) {
   const [state, actions] = useCMS();
+  const navigate = useNavigate();
 
   const isNew = () => props.itemId === "__new__";
 
@@ -32,18 +34,18 @@ export function Editor(props: EditorProps) {
     const existingSha = itemData()?.sha;
     await actions.saveItem(props.collectionKey, data, existingSha);
 
-    // If was new, switch to editing the created item
+    // If was new, navigate to the created item
     if (isNew()) {
       // Use slug or id field for the filename
       const id = (data.slug ?? data.id) as string;
       if (id) {
-        actions.setCurrentItem(id);
+        navigate(`/collections/${props.collectionKey}/${id}`, { replace: true });
       }
     }
   };
 
   const handleCancel = () => {
-    actions.setCurrentItem(null);
+    navigate(`/collections/${props.collectionKey}`);
   };
 
   return (

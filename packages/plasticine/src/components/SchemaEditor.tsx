@@ -1,4 +1,4 @@
-import { createSignal, Show } from "solid-js";
+import { createEffect, createSignal, onMount, Show } from "solid-js";
 import { useCMS } from "../store";
 
 export function SchemaEditor() {
@@ -6,15 +6,19 @@ export function SchemaEditor() {
   const [localContent, setLocalContent] = createSignal("");
   const [isDirty, setIsDirty] = createSignal(false);
 
+  // Load schema on mount if not already loaded
+  onMount(() => {
+    if (!state.schema.content && !state.schema.loading) {
+      actions.loadSchema();
+    }
+  });
+
   // Sync local content when schema loads
-  const syncContent = () => {
+  createEffect(() => {
     if (state.schema.content && !isDirty()) {
       setLocalContent(state.schema.content);
     }
-  };
-
-  // Watch for schema content changes
-  syncContent();
+  });
 
   const handleChange = (e: Event) => {
     const value = (e.target as HTMLTextAreaElement).value;

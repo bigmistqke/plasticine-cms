@@ -1,4 +1,5 @@
-import { Match, Show, Switch } from "solid-js";
+import { A, Route, Router, useParams } from "@solidjs/router";
+import { Show, type JSX } from "solid-js";
 import type { PlasticineConfig } from "../schema";
 import { CMSProvider, useCMS, type BackendFactory } from "../store";
 import { Auth } from "./Auth";
@@ -12,24 +13,58 @@ interface CMSProps {
   config: PlasticineConfig;
   backend: BackendFactory;
   schemaPath?: string;
+  basePath?: string;
 }
 
 /**
- * Main CMS layout component
+ * Welcome page component
  */
-function CMSLayout(props: { config: PlasticineConfig }) {
-  const [state, actions] = useCMS();
+function Welcome() {
+  return (
+    <div class="cms-welcome">
+      <h2>Welcome to Plasticine</h2>
+      <p>Select a collection from the sidebar to get started.</p>
+    </div>
+  );
+}
 
-  const currentSchema = () =>
-    state.currentCollection
-      ? props.config.getSchema(state.currentCollection)
-      : null;
+/**
+ * Route component for editing an item
+ */
+function EditorRoute(props: { config: PlasticineConfig }) {
+  const params = useParams<{ collection: string; item: string }>();
+  const schema = () => props.config.getSchema(params.collection);
+
+  return (
+    <Show when={schema()} fallback={<div>Collection not found</div>}>
+      <Editor
+        schema={schema()!}
+        collectionKey={params.collection}
+        itemId={params.item}
+      />
+    </Show>
+  );
+}
+
+/**
+ * Route component for item list
+ */
+function ItemListRoute() {
+  const params = useParams<{ collection: string }>();
+  return <ItemList collectionKey={params.collection} />;
+}
+
+/**
+ * Main CMS layout component - wraps route content
+ */
+function CMSLayout(props: { config: PlasticineConfig; children?: JSX.Element }) {
+  const [state, actions] = useCMS();
 
   return (
     <div class="cms-layout">
       {/* Header */}
       <header class="cms-header">
-        <h1 class="cms-logo">Plasticine</h1>
+        <A href="/" class="cms-logo">Plasticine</A>
         <Show when={state.user}>
           <div class="cms-user">
             <img
@@ -54,14 +89,14 @@ function CMSLayout(props: { config: PlasticineConfig }) {
           <nav class="media-nav">
             <h2 class="media-nav-title">Media</h2>
             <ul class="media-nav-items">
-              <li
+              <A
+                href="/media"
                 class="media-nav-item"
-                classList={{ active: state.currentView === "media" }}
-                onClick={() => actions.setCurrentView("media")}
+                activeClass="active"
               >
                 <span class="media-nav-name">Library</span>
                 <span class="media-nav-count">{state.media.files.length}</span>
-              </li>
+              </A>
             </ul>
           </nav>
 
@@ -69,51 +104,20 @@ function CMSLayout(props: { config: PlasticineConfig }) {
           <nav class="schema-nav">
             <h2 class="schema-nav-title">Settings</h2>
             <ul class="schema-nav-items">
-              <li
+              <A
+                href="/schema"
                 class="schema-nav-item"
-                classList={{ active: state.currentView === "schema" }}
-                onClick={() => actions.setCurrentView("schema")}
+                activeClass="active"
               >
                 <span class="schema-nav-name">Schema</span>
-              </li>
+              </A>
             </ul>
           </nav>
         </aside>
 
-        {/* Main content */}
+        {/* Main content - renders nested routes */}
         <main class="cms-main">
-          <Switch
-            fallback={
-              <div class="cms-welcome">
-                <h2>Welcome to Plasticine</h2>
-                <p>Select a collection from the sidebar to get started.</p>
-              </div>
-            }
-          >
-            {/* Show schema editor */}
-            <Match when={state.currentView === "schema"}>
-              <SchemaEditor />
-            </Match>
-
-            {/* Show media library */}
-            <Match when={state.currentView === "media"}>
-              <MediaLibrary />
-            </Match>
-
-            {/* Show editor when item is selected */}
-            <Match when={state.currentItem && currentSchema()}>
-              <Editor
-                schema={currentSchema()!}
-                collectionKey={state.currentCollection!}
-                itemId={state.currentItem!}
-              />
-            </Match>
-
-            {/* Show item list when collection is selected */}
-            <Match when={state.currentCollection}>
-              <ItemList collectionKey={state.currentCollection!} />
-            </Match>
-          </Switch>
+          {props.children}
         </main>
       </div>
     </div>
@@ -121,21 +125,9 @@ function CMSLayout(props: { config: PlasticineConfig }) {
 }
 
 /**
- * Full CMS application with auth gate
+ * Auth gate wrapper component
  */
-export function CMS(props: CMSProps) {
-  return (
-    <CMSProvider
-      config={props.config}
-      backend={props.backend}
-      schemaPath={props.schemaPath}
-    >
-      <CMSInner config={props.config} />
-    </CMSProvider>
-  );
-}
-
-function CMSInner(props: { config: PlasticineConfig }) {
+function AuthGate(props: { config: PlasticineConfig; children: any }) {
   const [state] = useCMS();
 
   return (
@@ -151,8 +143,34 @@ function CMSInner(props: { config: PlasticineConfig }) {
           </div>
         }
       >
-        <CMSLayout config={props.config} />
+        <CMSLayout config={props.config}>{props.children}</CMSLayout>
       </Show>
     </Show>
+  );
+}
+
+/**
+ * Full CMS application with auth gate
+ */
+export function CMS(props: CMSProps) {
+  return (
+    <Router
+      base={props.basePath}
+      root={(routeProps) => (
+        <CMSProvider
+          config={props.config}
+          backend={props.backend}
+          schemaPath={props.schemaPath}
+        >
+          <AuthGate config={props.config}>{routeProps.children}</AuthGate>
+        </CMSProvider>
+      )}
+    >
+      <Route path="/" component={Welcome} />
+      <Route path="/schema" component={SchemaEditor} />
+      <Route path="/media" component={MediaLibrary} />
+      <Route path="/collections/:collection/:item" component={() => <EditorRoute config={props.config} />} />
+      <Route path="/collections/:collection" component={ItemListRoute} />
+    </Router>
   );
 }

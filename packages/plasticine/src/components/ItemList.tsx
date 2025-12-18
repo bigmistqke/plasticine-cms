@@ -1,3 +1,4 @@
+import { A } from "@solidjs/router";
 import { For, Show, createSignal } from "solid-js";
 import { useCMS } from "../store";
 
@@ -43,12 +44,12 @@ export function ItemList(props: ItemListProps) {
     <div class="item-list">
       <div class="item-list-header">
         <h2 class="item-list-title">{displayName()}</h2>
-        <button
+        <A
+          href={`/collections/${props.collectionKey}/__new__`}
           class="btn btn-primary"
-          onClick={() => actions.setCurrentItem("__new__")}
         >
           + New
-        </button>
+        </A>
       </div>
 
       <Show when={collectionState()?.loading}>
@@ -68,17 +69,15 @@ export function ItemList(props: ItemListProps) {
       <ul class="item-list-items">
         <For each={items()}>
           {(item) => (
-            <li
-              class="item-list-item"
-              classList={{ active: state.currentItem === item.id }}
-            >
-              <div
+            <li class="item-list-item">
+              <A
+                href={`/collections/${props.collectionKey}/${item.id}`}
                 class="item-info"
-                onClick={() => actions.setCurrentItem(item.id)}
+                activeClass="active"
               >
                 <span class="item-title">{getItemTitle(item.data)}</span>
                 <span class="item-id">{item.id}</span>
-              </div>
+              </A>
               <button
                 class="btn btn-danger btn-small"
                 onClick={(e) => {

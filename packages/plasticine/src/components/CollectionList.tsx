@@ -1,3 +1,4 @@
+import { A } from "@solidjs/router";
 import { For } from "solid-js";
 import { useCMS } from "../store";
 
@@ -10,7 +11,7 @@ interface CollectionListProps {
  * Data is already loaded on authentication
  */
 export function CollectionList(props: CollectionListProps) {
-  const [state, actions] = useCMS();
+  const [state] = useCMS();
 
   // Capitalize collection name for display
   const displayName = (name: string) =>
@@ -22,16 +23,16 @@ export function CollectionList(props: CollectionListProps) {
       <ul class="collection-list-items">
         <For each={props.collections}>
           {(name) => (
-            <li
+            <A
+              href={`/collections/${name}`}
               class="collection-list-item"
-              classList={{ active: state.currentCollection === name }}
-              onClick={() => actions.setCurrentCollection(name)}
+              activeClass="active"
             >
               <span class="collection-name">{displayName(name)}</span>
               <span class="collection-count">
                 {state.collections[name]?.items.length || 0}
               </span>
-            </li>
+            </A>
           )}
         </For>
       </ul>
