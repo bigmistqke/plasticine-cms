@@ -5,49 +5,49 @@
  */
 
 export interface ContentItem {
-  id: string;
-  sha?: string; // For backends that need version/etag tracking
-  data: Record<string, unknown>;
+  id: string
+  sha?: string // For backends that need version/etag tracking
+  data: Record<string, unknown>
 }
 
 export interface ContentBackend {
-  listCollection(collection: string): Promise<ContentItem[]>;
-  getItem(collection: string, id: string): Promise<ContentItem>;
+  listCollection(collection: string): Promise<ContentItem[]>
+  getItem(collection: string, id: string): Promise<ContentItem>
   saveItem(
     collection: string,
     id: string,
     data: Record<string, unknown>,
-    sha?: string
-  ): Promise<{ sha?: string }>;
-  deleteItem(collection: string, id: string, sha?: string): Promise<void>;
+    sha?: string,
+  ): Promise<{ sha?: string }>
+  deleteItem(collection: string, id: string, sha?: string): Promise<void>
 }
 
 export interface MediaFile {
-  name: string;
-  path: string;
-  sha?: string;
-  url: string;
-  size: number;
+  name: string
+  path: string
+  sha?: string
+  url: string
+  size: number
 }
 
 export interface MediaBackend {
-  listMedia(): Promise<MediaFile[]>;
-  uploadFile(file: File, folder?: string): Promise<{ url: string; sha?: string }>;
-  deleteFile(path: string, sha?: string): Promise<void>;
+  listMedia(): Promise<MediaFile[]>
+  uploadFile(file: File, folder?: string): Promise<{ url: string; sha?: string }>
+  deleteFile(path: string, sha?: string): Promise<void>
 }
 
 export interface FileContent {
-  content: string;
-  sha?: string;
+  content: string
+  sha?: string
 }
 
 export interface ConfigBackend {
-  readFile(path: string): Promise<FileContent>;
-  writeFile(path: string, content: string, sha?: string): Promise<{ sha?: string }>;
+  readFile(path: string): Promise<FileContent>
+  writeFile(path: string, content: string, sha?: string): Promise<{ sha?: string }>
 }
 
 export interface Backend {
-  content: ContentBackend;
-  media: MediaBackend;
-  config: ConfigBackend;
+  content: ContentBackend
+  media: MediaBackend
+  config: ConfigBackend
 }

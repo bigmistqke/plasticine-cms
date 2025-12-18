@@ -1,43 +1,43 @@
-import { For, Show, createSignal } from "solid-js";
-import { useCMS } from "../context";
-import { type MediaFile } from "../store";
+import { For, Show, createSignal } from 'solid-js'
+import { useCMS } from '../context'
+import { type MediaFile } from '../store'
 
 /**
  * Media library for viewing and managing uploaded files
  * Data is already loaded on authentication, no lazy loading needed
  */
 export function MediaLibrary() {
-  const [state, actions] = useCMS();
-  const [deleting, setDeleting] = createSignal<string | null>(null);
+  const [state, actions] = useCMS()
+  const [deleting, setDeleting] = createSignal<string | null>(null)
 
   const isImage = (name: string) => {
-    return /\.(jpg|jpeg|png|gif|webp|svg|ico)$/i.test(name);
-  };
+    return /\.(jpg|jpeg|png|gif|webp|svg|ico)$/i.test(name)
+  }
 
   const formatSize = (bytes: number) => {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  };
+    if (bytes < 1024) return `${bytes} B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  }
 
   const handleDelete = async (file: MediaFile) => {
-    const references = actions.getMediaReferences(file.url);
-    const refCount = references.length;
+    const references = actions.getMediaReferences(file.url)
+    const refCount = references.length
 
     const message =
       refCount > 0
-        ? `This will delete the file and remove ${refCount} reference${refCount > 1 ? "s" : ""} from your content. Continue?`
-        : "Delete this file?";
+        ? `This will delete the file and remove ${refCount} reference${refCount > 1 ? 's' : ''} from your content. Continue?`
+        : 'Delete this file?'
 
-    if (!confirm(message)) return;
+    if (!confirm(message)) return
 
-    setDeleting(file.path);
+    setDeleting(file.path)
     try {
-      await actions.deleteMedia(file.url, file.path, file.sha);
+      await actions.deleteMedia(file.url, file.path, file.sha)
     } finally {
-      setDeleting(null);
+      setDeleting(null)
     }
-  };
+  }
 
   return (
     <div class="media-library">
@@ -61,21 +61,18 @@ export function MediaLibrary() {
 
       <div class="media-grid">
         <For each={state.media.files}>
-          {(file) => {
-            const references = () => actions.getMediaReferences(file.url);
+          {file => {
+            const references = () => actions.getMediaReferences(file.url)
 
             return (
-              <div
-                class="media-item"
-                classList={{ deleting: deleting() === file.path }}
-              >
+              <div class="media-item" classList={{ deleting: deleting() === file.path }}>
                 <div class="media-preview">
                   <Show
                     when={isImage(file.name)}
                     fallback={
                       <div class="media-file-icon">
                         <span class="media-file-ext">
-                          {file.name.split(".").pop()?.toUpperCase()}
+                          {file.name.split('.').pop()?.toUpperCase()}
                         </span>
                       </div>
                     }
@@ -91,9 +88,9 @@ export function MediaLibrary() {
                   <span class="media-meta">
                     {formatSize(file.size)}
                     <Show when={references().length > 0}>
-                      {" · "}
+                      {' · '}
                       {references().length} ref
-                      {references().length > 1 ? "s" : ""}
+                      {references().length > 1 ? 's' : ''}
                     </Show>
                   </span>
                 </div>
@@ -104,13 +101,13 @@ export function MediaLibrary() {
                   disabled={deleting() === file.path}
                   title="Delete file"
                 >
-                  {deleting() === file.path ? "..." : "×"}
+                  {deleting() === file.path ? '...' : '×'}
                 </button>
               </div>
-            );
+            )
           }}
         </For>
       </div>
     </div>
-  );
+  )
 }

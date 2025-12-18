@@ -1,53 +1,45 @@
-import { A } from "@solidjs/router";
-import { For, Show, createSignal } from "solid-js";
-import { useCMS } from "../context";
+import { A } from '@solidjs/router'
+import { For, Show, createSignal } from 'solid-js'
+import { useCMS } from '../context'
 
 interface ItemListProps {
-  collectionKey: string;
+  collectionKey: string
 }
 
 /**
  * List of items in a collection
  */
 export function ItemList(props: ItemListProps) {
-  const [state, actions] = useCMS();
-  const [deleting, setDeleting] = createSignal<string | null>(null);
+  const [state, actions] = useCMS()
+  const [deleting, setDeleting] = createSignal<string | null>(null)
 
-  const collectionState = () => state.collections[props.collectionKey];
-  const items = () => collectionState()?.items || [];
+  const collectionState = () => state.collections[props.collectionKey]
+  const items = () => collectionState()?.items || []
 
   // Capitalize collection name for display
   const displayName = () =>
-    props.collectionKey.charAt(0).toUpperCase() + props.collectionKey.slice(1);
+    props.collectionKey.charAt(0).toUpperCase() + props.collectionKey.slice(1)
 
   const getItemTitle = (data: Record<string, unknown>): string => {
-    return (
-      (data.title as string) ||
-      (data.name as string) ||
-      (data.slug as string) ||
-      "Untitled"
-    );
-  };
+    return (data.title as string) || (data.name as string) || (data.slug as string) || 'Untitled'
+  }
 
   const handleDelete = async (id: string, sha: string) => {
-    if (!confirm("Are you sure you want to delete this item?")) return;
+    if (!confirm('Are you sure you want to delete this item?')) return
 
-    setDeleting(id);
+    setDeleting(id)
     try {
-      await actions.deleteItem(props.collectionKey, id, sha);
+      await actions.deleteItem(props.collectionKey, id, sha)
     } finally {
-      setDeleting(null);
+      setDeleting(null)
     }
-  };
+  }
 
   return (
     <div class="item-list">
       <div class="item-list-header">
         <h2 class="item-list-title">{displayName()}</h2>
-        <A
-          href={`/collections/${props.collectionKey}/__new__`}
-          class="btn btn-primary"
-        >
+        <A href={`/collections/${props.collectionKey}/__new__`} class="btn btn-primary">
           + New
         </A>
       </div>
@@ -66,7 +58,7 @@ export function ItemList(props: ItemListProps) {
 
       <ul class="item-list-items">
         <For each={items()}>
-          {(item) => (
+          {item => (
             <li class="item-list-item">
               <A
                 href={`/collections/${props.collectionKey}/${item.id}`}
@@ -78,18 +70,18 @@ export function ItemList(props: ItemListProps) {
               </A>
               <button
                 class="btn btn-danger btn-small"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDelete(item.id, item.sha);
+                onClick={e => {
+                  e.stopPropagation()
+                  handleDelete(item.id, item.sha)
                 }}
                 disabled={deleting() === item.id}
               >
-                {deleting() === item.id ? "..." : "Delete"}
+                {deleting() === item.id ? '...' : 'Delete'}
               </button>
             </li>
           )}
         </For>
       </ul>
     </div>
-  );
+  )
 }

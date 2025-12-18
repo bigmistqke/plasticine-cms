@@ -1,54 +1,50 @@
-import { createForm, Form } from "@formisch/solid";
-import { createSignal, For, Show } from "solid-js";
-import type * as v from "valibot";
-import { getSchemaEntries } from "../schema";
-import { DynamicField } from "./FieldComponents";
+import { createForm, Form } from '@formisch/solid'
+import { createSignal, For, Show } from 'solid-js'
+import type * as v from 'valibot'
+import { getSchemaEntries } from '../schema'
+import { DynamicField } from './FieldComponents'
 
 interface SchemaFormProps {
-  schema: v.GenericSchema;
-  initialData?: Record<string, unknown>;
-  onSubmit: (data: Record<string, unknown>) => Promise<void>;
-  onCancel?: () => void;
-  submitLabel?: string;
+  schema: v.GenericSchema
+  initialData?: Record<string, unknown>
+  onSubmit: (data: Record<string, unknown>) => Promise<void>
+  onCancel?: () => void
+  submitLabel?: string
 }
 
 /**
  * Auto-generated form from a Valibot schema
  */
 export function SchemaForm(props: SchemaFormProps) {
-  const [submitting, setSubmitting] = createSignal(false);
-  const [submitError, setSubmitError] = createSignal<string | null>(null);
+  const [submitting, setSubmitting] = createSignal(false)
+  const [submitError, setSubmitError] = createSignal<string | null>(null)
 
   const form = createForm({
     schema: props.schema,
     values: props.initialData,
-  } as any);
+  } as any)
 
-  const entries = () => getSchemaEntries(props.schema);
+  const entries = () => getSchemaEntries(props.schema)
 
   const handleSubmit = async (data: unknown) => {
-    setSubmitting(true);
-    setSubmitError(null);
+    setSubmitting(true)
+    setSubmitError(null)
 
     try {
-      await props.onSubmit(data as Record<string, unknown>);
+      await props.onSubmit(data as Record<string, unknown>)
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : "Failed to save");
+      setSubmitError(error instanceof Error ? error.message : 'Failed to save')
     } finally {
-      setSubmitting(false);
+      setSubmitting(false)
     }
-  };
+  }
 
   return (
     <Form of={form} onSubmit={handleSubmit} class="schema-form">
       <div class="form-fields">
         <For each={Object.entries(entries() || {})}>
           {([key, fieldSchema]) => (
-            <DynamicField
-              form={form}
-              path={[key]}
-              schema={fieldSchema as v.GenericSchema}
-            />
+            <DynamicField form={form} path={[key]} schema={fieldSchema as v.GenericSchema} />
           )}
         </For>
       </div>
@@ -69,9 +65,9 @@ export function SchemaForm(props: SchemaFormProps) {
           </button>
         </Show>
         <button type="submit" class="btn btn-primary" disabled={submitting()}>
-          {submitting() ? "Saving..." : props.submitLabel || "Save"}
+          {submitting() ? 'Saving...' : props.submitLabel || 'Save'}
         </button>
       </div>
     </Form>
-  );
+  )
 }

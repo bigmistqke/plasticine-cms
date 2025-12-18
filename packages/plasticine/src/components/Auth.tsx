@@ -1,22 +1,22 @@
-import { Match, Show, Switch, createSignal } from "solid-js";
-import { useCMS } from "../context";
+import { Match, Show, Switch, createSignal } from 'solid-js'
+import { useCMS } from '../context'
 
 /**
  * Authentication component with Device Flow OAuth support
  */
 export function Auth() {
-  const [state, actions] = useCMS();
-  const [tokenInput, setTokenInput] = createSignal("");
+  const [state, actions] = useCMS()
+  const [tokenInput, setTokenInput] = createSignal('')
   // Default to token mode since Device Flow requires a proxy for browsers
-  const [useToken, setUseToken] = createSignal(true);
+  const [useToken, setUseToken] = createSignal(true)
 
   const handleTokenSubmit = async (e: Event) => {
-    e.preventDefault();
-    const token = tokenInput().trim();
+    e.preventDefault()
+    const token = tokenInput().trim()
     if (token) {
-      await actions.loginWithToken(token);
+      await actions.loginWithToken(token)
     }
-  };
+  }
 
   return (
     <div class="auth">
@@ -28,55 +28,18 @@ export function Auth() {
           <div class="auth-error">{state.authError}</div>
         </Show>
 
-        <Switch
-            {/* Device Flow requires a proxy for browsers - disabled for now */}
-           /* fallback={
-            <>
-              <button
-                class="btn btn-primary btn-large"
-                onClick={() => actions.startOAuth()}
-                disabled={state.authLoading}
-              >
-                {state.authLoading ? "Starting..." : "Login with GitHub"}
-              </button>
-
-              <button class="btn btn-link" onClick={() => setUseToken(true)}>
-                Or use a Personal Access Token
-              </button>
-            </>
-          } */
-        >
-          {/* Device Code Display */}
-          {/* <Match when={state.deviceCode}>
-            <div class="device-code-flow">
-              <p>Go to:</p>
-              <a
-                href={state.deviceCode!.verification_uri}
-                target="_blank"
-                rel="noopener noreferrer"
-                class="verification-url"
-              >
-                {state.deviceCode!.verification_uri}
-              </a>
-
-              <p>And enter this code:</p>
-              <div class="user-code">{state.deviceCode!.user_code}</div>
-
-              <p class="waiting-text">Waiting for authorization...</p>
-            </div>
-          </Match> */}
-          {/* Token Input */}
+        <Switch>
           <Match when={useToken()}>
             <form onSubmit={handleTokenSubmit} class="token-form">
               <p class="token-instructions">
-                Create a{" "}
+                Create a{' '}
                 <a
                   href="https://github.com/settings/tokens/new?scopes=repo&description=Plasticine%20CMS"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
                   Personal Access Token
-                </a>{" "}
+                </a>{' '}
                 with <code>repo</code> scope.
               </p>
 
@@ -85,7 +48,7 @@ export function Auth() {
                 class="input"
                 placeholder="ghp_xxxxxxxxxxxx"
                 value={tokenInput()}
-                onInput={(e) => setTokenInput(e.currentTarget.value)}
+                onInput={e => setTokenInput(e.currentTarget.value)}
                 disabled={state.authLoading}
               />
 
@@ -94,12 +57,12 @@ export function Auth() {
                 class="btn btn-primary"
                 disabled={state.authLoading || !tokenInput().trim()}
               >
-                {state.authLoading ? "Verifying..." : "Login"}
+                {state.authLoading ? 'Verifying...' : 'Login'}
               </button>
             </form>
           </Match>
         </Switch>
       </div>
     </div>
-  );
+  )
 }
