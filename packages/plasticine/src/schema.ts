@@ -38,14 +38,24 @@ export interface VersionedConfig {
 
 /**
  * Define a versioned CMS config
+ * Accepts an object where keys are collection names and values are VersionedSchema objects
  */
-export function defineConfig(config: PlasticineConfig): VersionedConfig {
-  return createVersionedConfig([config], []);
+export function defineConfig(
+  collections: Record<string, VersionedSchema<any[], v.GenericSchema>>
+): VersionedConfig {
+  // Extract the current schema from each VersionedSchema
+  const schemas: Record<string, v.GenericSchema> = {};
+  for (const [name, versionedSchema] of Object.entries(collections)) {
+    schemas[name] = versionedSchema.schema;
+  }
+  const config: PlasticineConfig = { schemas };
+  return createVersionedConfig([config], [], collections);
 }
 
 function createVersionedConfig(
   versions: PlasticineConfig[],
-  migrations: Array<(old: any) => any>
+  migrations: Array<(old: any) => any>,
+  collections: Record<string, VersionedSchema<any[], v.GenericSchema>>
 ): VersionedConfig {
   const current = versions[versions.length - 1];
 
@@ -57,44 +67,19 @@ function createVersionedConfig(
     version(newConfig, migrate) {
       return createVersionedConfig(
         [...versions, newConfig],
-        [...migrations, migrate]
+        [...migrations, migrate],
+        collections
       );
     },
 
     parseCollection(collection, data) {
-      const currentSchema = current.schemas[collection];
-      if (!currentSchema) {
+      const versionedSchema = collections[collection];
+      if (!versionedSchema) {
         throw new Error(`Unknown collection: ${collection}`);
       }
 
-      // Try current schema first
-      const result = v.safeParse(currentSchema, data);
-      if (result.success) {
-        return result.output;
-      }
-
-      // Try older versions and migrate
-      for (let i = versions.length - 2; i >= 0; i--) {
-        const oldConfig = versions[i];
-
-        // Find which collection this data might belong to
-        // (could be renamed in later versions)
-        for (const [oldCollection, oldSchema] of Object.entries(oldConfig.schemas)) {
-          const oldResult = v.safeParse(oldSchema, data);
-          if (oldResult.success) {
-            // Migrate through all versions from i to current
-            let migratedData = { schemas: { [oldCollection]: oldResult.output } };
-            for (let j = i; j < migrations.length; j++) {
-              migratedData = migrations[j](migratedData);
-            }
-            // Find the data in the migrated structure
-            return migratedData.schemas[collection];
-          }
-        }
-      }
-
-      // No valid version found
-      throw new Error(`Data does not match any schema version for ${collection}`);
+      // Use the VersionedSchema's parse method which handles migrations internally
+      return versionedSchema.parse(data);
     },
 
     getSchema(collection) {
