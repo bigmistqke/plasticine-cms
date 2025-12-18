@@ -1,7 +1,6 @@
 import { Show, Match, Switch } from "solid-js";
-import { useCMS, CMSProvider } from "../store";
+import { useCMS, CMSProvider, type BackendFactory } from "../store";
 import type { VersionedConfig } from "../schema";
-import type { GitHubConfig } from "../github";
 import { Auth } from "./Auth";
 import { CollectionList } from "./CollectionList";
 import { ItemList } from "./ItemList";
@@ -10,7 +9,7 @@ import { MediaLibrary } from "./MediaLibrary";
 
 interface CMSProps {
   config: VersionedConfig;
-  github: GitHubConfig;
+  backend: BackendFactory;
 }
 
 /**
@@ -107,7 +106,7 @@ function CMSLayout(props: { config: VersionedConfig }) {
  */
 export function CMS(props: CMSProps) {
   return (
-    <CMSProvider config={props.config} github={props.github}>
+    <CMSProvider config={props.config} backend={props.backend}>
       <CMSInner config={props.config} />
     </CMSProvider>
   );

@@ -20,9 +20,14 @@ export {
 } from "./fields";
 export type { FieldMetadata, FieldUIType } from "./fields";
 
-// GitHub
+// Backend
+export type { Backend, ContentBackend, MediaBackend, ContentItem, MediaFile } from "./backend";
+
+// GitHub backend
 export {
   GitHubClient,
+  github,
+  createGitHubBackend,
   startDeviceFlow,
   pollForToken,
   tokenStorage,
@@ -36,12 +41,11 @@ export {
   useCMS,
 } from "./store";
 export type {
+  BackendFactory,
   CMSProps,
   CMSState,
   CMSActions,
   CMSStore,
-  ContentItem,
-  MediaFile,
   MediaState,
 } from "./store";
 

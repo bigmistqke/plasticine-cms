@@ -1,14 +1,17 @@
-import { createSignal, createContext, useContext, type JSX } from "solid-js";
+import { createContext, useContext, type JSX } from "solid-js";
 import { createStore, produce } from "solid-js/store";
-import {
-  GitHubClient,
-  tokenStorage,
-  type GitHubConfig,
-  type GitHubFile,
-  type DeviceCodeResponse,
-} from "./github";
+import { tokenStorage } from "./github";
 import type { VersionedConfig } from "./schema";
 import { getSchemaEntries, getSchemaMetadata } from "./schema";
+import type { Backend, ContentItem, MediaFile } from "./backend";
+
+/**
+ * Backend factory interface - created by github(), mongodb(), etc.
+ */
+export interface BackendFactory {
+  createBackend(token: string): Backend;
+  getUser(token: string): Promise<{ login: string; avatar_url: string; name: string }>;
+}
 
 /**
  * CMS Store Types
@@ -16,28 +19,16 @@ import { getSchemaEntries, getSchemaMetadata } from "./schema";
 
 export interface CMSProps {
   config: VersionedConfig;
-  github: GitHubConfig;
+  backend: BackendFactory;
 }
 
-export interface ContentItem {
-  id: string;
-  filename: string;
-  sha: string;
-  data: Record<string, unknown>;
-}
+// Re-export for convenience
+export type { ContentItem, MediaFile } from "./backend";
 
 export interface CollectionState {
-  items: ContentItem[];
+  items: Array<ContentItem & { filename: string }>;
   loading: boolean;
   error: string | null;
-}
-
-export interface MediaFile {
-  name: string;
-  path: string;
-  sha: string;
-  url: string;
-  size: number;
 }
 
 export interface MediaState {
@@ -52,7 +43,6 @@ export interface CMSState {
   user: { login: string; avatar_url: string; name: string } | null;
   authLoading: boolean;
   authError: string | null;
-  deviceCode: DeviceCodeResponse | null;
 
   // Data loading (all collections + media)
   dataLoading: boolean;
@@ -73,7 +63,6 @@ export interface CMSState {
 export interface CMSActions {
   // Auth
   loginWithToken(token: string): Promise<void>;
-  startOAuth(): Promise<void>;
   logout(): void;
 
   // Data
@@ -81,13 +70,13 @@ export interface CMSActions {
 
   // Collections
   saveItem(collection: string, data: Record<string, unknown>, existingSha?: string): Promise<void>;
-  deleteItem(collection: string, id: string, sha: string): Promise<void>;
+  deleteItem(collection: string, id: string, sha?: string): Promise<void>;
 
   // Files
   uploadFile(file: File, fieldPath?: string): Promise<string>;
 
   // Media
-  deleteMedia(url: string, path: string, sha: string): Promise<void>;
+  deleteMedia(url: string, path: string, sha?: string): Promise<void>;
   getMediaReferences(url: string): Array<{ collection: string; id: string; field: string }>;
 
   // Navigation
@@ -102,8 +91,8 @@ export type CMSStore = [CMSState, CMSActions];
  * Create the CMS store
  */
 export function createCMSStore(props: CMSProps): CMSStore {
-  const { config, github } = props;
-  let client: GitHubClient | null = null;
+  const { config, backend: backendFactory } = props;
+  let backend: Backend | null = null;
 
   const collectionNames = config.getCollections();
 
@@ -112,7 +101,6 @@ export function createCMSStore(props: CMSProps): CMSStore {
     user: null,
     authLoading: false,
     authError: null,
-    deviceCode: null,
     dataLoading: false,
     dataError: null,
     collections: Object.fromEntries(
@@ -145,66 +133,35 @@ export function createCMSStore(props: CMSProps): CMSStore {
       .map(([key]) => key);
   };
 
-  const getFilename = (collection: string, data: Record<string, unknown>): string => {
+  const getId = (data: Record<string, unknown>): string => {
     // Use slug field if present, otherwise fallback to timestamp
     const value = data.slug ?? data.id;
     if (typeof value === "string" && value) {
-      return `${value}.json`;
+      return value;
     }
-    return `${Date.now()}.json`;
+    return Date.now().toString();
   };
 
   /**
    * Load a single collection's items
    */
-  const loadCollection = async (name: string): Promise<ContentItem[]> => {
-    if (!client) throw new Error("Not authenticated");
+  const loadCollection = async (name: string): Promise<Array<ContentItem & { filename: string }>> => {
+    if (!backend) throw new Error("Not authenticated");
 
     const schema = config.getSchema(name);
     if (!schema) throw new Error(`Unknown collection: ${name}`);
 
-    const files = await client.listCollection(name);
-    const items: ContentItem[] = [];
+    const items = await backend.content.listCollection(name);
 
-    for (const file of files) {
-      if (file.type === "file" && file.name.endsWith(".json")) {
-        try {
-          const { data, sha } = await client.getJSON(name, file.name);
-          // Parse through versioned config (auto-migrates)
-          const parsed = config.parseCollection(name, data) as Record<string, unknown>;
-          items.push({
-            id: file.name.replace(".json", ""),
-            filename: file.name,
-            sha,
-            data: parsed,
-          });
-        } catch (e) {
-          console.error(`Failed to load ${file.name}:`, e);
-        }
-      }
-    }
-
-    return items;
-  };
-
-  /**
-   * Load all media files
-   */
-  const loadMedia = async (): Promise<MediaFile[]> => {
-    if (!client) throw new Error("Not authenticated");
-
-    const uploadsPath = `${github.contentPath || "content"}/uploads`;
-    const files = await client.listFolder(uploadsPath, true);
-
-    return files
-      .filter((f) => f.type === "file")
-      .map((f) => ({
-        name: f.name,
-        path: f.path,
-        sha: f.sha,
-        size: f.size,
-        url: `https://raw.githubusercontent.com/${github.owner}/${github.repo}/${github.branch || "main"}/${f.path}`,
-      }));
+    return items.map((item) => {
+      // Parse through versioned config (auto-migrates)
+      const parsed = config.parseCollection(name, item.data) as Record<string, unknown>;
+      return {
+        ...item,
+        filename: `${item.id}.json`,
+        data: parsed,
+      };
+    });
   };
 
   const actions: CMSActions = {
@@ -213,8 +170,8 @@ export function createCMSStore(props: CMSProps): CMSStore {
       setState("authError", null);
 
       try {
-        client = new GitHubClient(token, github);
-        const user = await client.getUser();
+        const user = await backendFactory.getUser(token);
+        backend = backendFactory.createBackend(token);
 
         tokenStorage.set(token);
         setState(
@@ -238,15 +195,9 @@ export function createCMSStore(props: CMSProps): CMSStore {
       }
     },
 
-    async startOAuth() {
-      // Device Flow requires a CORS proxy for browsers
-      // For now, use PAT mode instead
-      throw new Error("OAuth not available in browser. Please use a Personal Access Token.");
-    },
-
     logout() {
       tokenStorage.remove();
-      client = null;
+      backend = null;
       setState(
         produce((s) => {
           s.authenticated = false;
@@ -263,7 +214,7 @@ export function createCMSStore(props: CMSProps): CMSStore {
     },
 
     async loadAllData() {
-      if (!client) throw new Error("Not authenticated");
+      if (!backend) throw new Error("Not authenticated");
 
       setState("dataLoading", true);
       setState("dataError", null);
@@ -275,7 +226,7 @@ export function createCMSStore(props: CMSProps): CMSStore {
             name,
             items: await loadCollection(name),
           }))),
-          loadMedia(),
+          backend.media.listMedia(),
         ]);
 
         // Update state with all data
@@ -300,29 +251,25 @@ export function createCMSStore(props: CMSProps): CMSStore {
     },
 
     async saveItem(collection: string, data: Record<string, unknown>, existingSha?: string) {
-      if (!client) throw new Error("Not authenticated");
+      if (!backend) throw new Error("Not authenticated");
 
       const schema = config.getSchema(collection);
       if (!schema) throw new Error(`Unknown collection: ${collection}`);
 
       // Validate data against current schema
       const parsed = config.parseCollection(collection, data) as Record<string, unknown>;
-      const filename = getFilename(collection, parsed);
-      const message = existingSha
-        ? `cms: Update ${collection}/${filename}`
-        : `cms: Create ${collection}/${filename}`;
+      const id = getId(parsed);
 
-      const { sha } = await client.saveJSON(collection, filename, parsed, message, existingSha);
+      const { sha } = await backend.content.saveItem(collection, id, parsed, existingSha);
 
       // Update local state
-      const id = filename.replace(".json", "");
       setState(
         "collections",
         collection,
         "items",
         produce((items) => {
           const index = items.findIndex((item) => item.id === id);
-          const newItem: ContentItem = { id, filename, sha, data: parsed };
+          const newItem = { id, filename: `${id}.json`, sha, data: parsed };
           if (index >= 0) {
             items[index] = newItem;
           } else {
@@ -332,13 +279,10 @@ export function createCMSStore(props: CMSProps): CMSStore {
       );
     },
 
-    async deleteItem(collection: string, id: string, sha: string) {
-      if (!client) throw new Error("Not authenticated");
+    async deleteItem(collection: string, id: string, sha?: string) {
+      if (!backend) throw new Error("Not authenticated");
 
-      const filename = `${id}.json`;
-      const message = `cms: Delete ${collection}/${filename}`;
-
-      await client.deleteFile(collection, filename, message, sha);
+      await backend.content.deleteItem(collection, id, sha);
 
       setState(
         "collections",
@@ -354,13 +298,11 @@ export function createCMSStore(props: CMSProps): CMSStore {
     },
 
     async uploadFile(file: File, fieldPath?: string): Promise<string> {
-      if (!client) throw new Error("Not authenticated");
-      const uploadPath = fieldPath ? `uploads/${fieldPath}` : "uploads";
-      const { url, sha } = await client.uploadFile(file, uploadPath);
+      if (!backend) throw new Error("Not authenticated");
+
+      const { url, sha } = await backend.media.uploadFile(file, fieldPath);
 
       // Add to media state immediately
-      const uploadsPath = `${github.contentPath || "content"}/${uploadPath}`;
-      const timestamp = url.match(/\/(\d+)-[^/]+$/)?.[1] || Date.now().toString();
       const filename = url.split("/").pop() || "";
       setState(
         "media",
@@ -368,9 +310,9 @@ export function createCMSStore(props: CMSProps): CMSStore {
         produce((files) => {
           files.push({
             name: filename,
-            path: `${uploadsPath}/${filename}`,
+            path: filename, // Backend-specific path handling
             sha,
-            size: 0, // Size unknown for new uploads
+            size: file.size,
             url,
           });
         })
@@ -398,8 +340,8 @@ export function createCMSStore(props: CMSProps): CMSStore {
       return references;
     },
 
-    async deleteMedia(url: string, path: string, sha: string): Promise<void> {
-      if (!client) throw new Error("Not authenticated");
+    async deleteMedia(url: string, path: string, sha?: string): Promise<void> {
+      if (!backend) throw new Error("Not authenticated");
 
       // Find and update all references (collections are already loaded)
       const references = actions.getMediaReferences(url);
@@ -416,7 +358,7 @@ export function createCMSStore(props: CMSProps): CMSStore {
       }
 
       // Delete the media file
-      await client.deleteFileByPath(path, `cms: Delete media ${path}`, sha);
+      await backend.media.deleteFile(path, sha);
 
       // Remove from local state
       setState(
@@ -468,10 +410,10 @@ const CMSContext = createContext<CMSStore>();
 
 export function CMSProvider(props: {
   config: VersionedConfig;
-  github: GitHubConfig;
+  backend: BackendFactory;
   children: JSX.Element;
 }) {
-  const store = createCMSStore({ config: props.config, github: props.github });
+  const store = createCMSStore({ config: props.config, backend: props.backend });
 
   return (
     <CMSContext.Provider value={store}>{props.children}</CMSContext.Provider>

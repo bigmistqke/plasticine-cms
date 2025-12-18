@@ -470,3 +470,107 @@ export const tokenStorage = {
     localStorage.removeItem(this.key);
   },
 };
+
+/**
+ * Create a GitHub backend for Plasticine.
+ * Returns { content, media } that both use the same GitHubClient.
+ */
+import type { Backend, ContentBackend, MediaBackend, ContentItem, MediaFile } from "./backend";
+
+export interface GitHubBackendConfig extends GitHubConfig {
+  token: string;
+}
+
+export function createGitHubBackend(config: GitHubBackendConfig): Backend {
+  const client = new GitHubClient(config.token, config);
+  const branch = config.branch || "main";
+  const contentPath = config.contentPath || "content";
+
+  const content: ContentBackend = {
+    async listCollection(collection: string): Promise<ContentItem[]> {
+      const files = await client.listCollection(collection);
+      const items: ContentItem[] = [];
+
+      for (const file of files) {
+        if (file.type === "file" && file.name.endsWith(".json")) {
+          try {
+            const { data, sha } = await client.getJSON(collection, file.name);
+            items.push({
+              id: file.name.replace(".json", ""),
+              sha,
+              data: data as Record<string, unknown>,
+            });
+          } catch (e) {
+            console.error(`Failed to load ${file.name}:`, e);
+          }
+        }
+      }
+
+      return items;
+    },
+
+    async getItem(collection: string, id: string): Promise<ContentItem> {
+      const { data, sha } = await client.getJSON(collection, `${id}.json`);
+      return { id, sha, data: data as Record<string, unknown> };
+    },
+
+    async saveItem(
+      collection: string,
+      id: string,
+      data: Record<string, unknown>,
+      sha?: string
+    ): Promise<{ sha?: string }> {
+      const filename = `${id}.json`;
+      const message = sha
+        ? `cms: Update ${collection}/${filename}`
+        : `cms: Create ${collection}/${filename}`;
+      return client.saveJSON(collection, filename, data, message, sha);
+    },
+
+    async deleteItem(collection: string, id: string, sha?: string): Promise<void> {
+      const filename = `${id}.json`;
+      const message = `cms: Delete ${collection}/${filename}`;
+      await client.deleteFile(collection, filename, message, sha!);
+    },
+  };
+
+  const media: MediaBackend = {
+    async listMedia(): Promise<MediaFile[]> {
+      const uploadsPath = `${contentPath}/uploads`;
+      const files = await client.listFolder(uploadsPath, true);
+
+      return files
+        .filter((f) => f.type === "file")
+        .map((f) => ({
+          name: f.name,
+          path: f.path,
+          sha: f.sha,
+          size: f.size,
+          url: `https://raw.githubusercontent.com/${config.owner}/${config.repo}/${branch}/${f.path}`,
+        }));
+    },
+
+    async uploadFile(file: File, folder?: string): Promise<{ url: string; sha?: string }> {
+      const uploadPath = folder ? `uploads/${folder}` : "uploads";
+      return client.uploadFile(file, uploadPath);
+    },
+
+    async deleteFile(path: string, sha?: string): Promise<void> {
+      await client.deleteFileByPath(path, `cms: Delete media ${path}`, sha!);
+    },
+  };
+
+  return { content, media };
+}
+
+/**
+ * GitHub backend factory - creates backend after authentication.
+ * Use this with CMS component.
+ */
+export function github(config: GitHubConfig) {
+  return {
+    config,
+    createBackend: (token: string) => createGitHubBackend({ ...config, token }),
+    getUser: (token: string) => new GitHubClient(token, config).getUser(),
+  };
+}
