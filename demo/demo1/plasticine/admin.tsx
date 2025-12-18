@@ -10,4 +10,13 @@ const backend = github({
   contentPath: import.meta.env.VITE_GITHUB_CONTENT_PATH || "demo/demo1/content",
 });
 
-render(() => <CMS config={config} backend={backend} />, document.getElementById("root")!);
+render(
+  () => (
+    <CMS
+      config={config}
+      backend={backend}
+      schemaPath={import.meta.env.VITE_SCHEMA_PATH || "demo/demo1/plasticine/config.ts"}
+    />
+  ),
+  document.getElementById("root")!
+);
