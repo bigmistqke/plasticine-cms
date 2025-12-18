@@ -239,6 +239,7 @@ function ImageInput(props: InputProps) {
 
   const value = () => props.field.input as string;
   const accept = () => (props.metadata.accept as string) || "image/*";
+  const fieldPath = () => props.metadata.path as string | undefined;
 
   const handleFileSelect = async (e: Event) => {
     const input = e.target as HTMLInputElement;
@@ -247,7 +248,7 @@ function ImageInput(props: InputProps) {
 
     setUploading(true);
     try {
-      const url = await actions.uploadFile(file);
+      const url = await actions.uploadFile(file, fieldPath());
       // Update the field value by setting the input and triggering change
       if (urlInputRef) {
         urlInputRef.value = url;

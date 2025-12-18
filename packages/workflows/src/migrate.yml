@@ -19,5 +19,4 @@ jobs:
       - name: Migrate content
         uses: ./packages/workflows
         with:
-          config: demo/demo1/src/plasticine.config.ts
-          content: demo/demo1/content
+          root: demo/demo1

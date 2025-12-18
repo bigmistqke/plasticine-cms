@@ -12,7 +12,7 @@ import {
   text,
   textarea,
 } from "@plasticine/core/fields";
-import type { CMSConfig } from "@plasticine/core/store";
+import type { CMSConfig, MediaConfig } from "@plasticine/core/store";
 
 /**
  * Authors collection
@@ -22,7 +22,7 @@ export const authors = schema(
     slug: slug({ label: "Slug" }),
     name: text({ label: "Name", placeholder: "John Doe" }),
     bio: optional(textarea({ label: "Bio", placeholder: "A short bio..." })),
-    avatar: optional(image({ label: "Avatar" })),
+    avatar: optional(image({ label: "Avatar", path: "avatars" })),
   })
 );
 
@@ -74,6 +74,13 @@ export const pages = schema(
 );
 
 /**
+ * Media Configuration
+ */
+export const media: MediaConfig = {
+  path: "uploads", // Relative to contentPath
+};
+
+/**
  * CMS Configuration
  *
  * To use this CMS:
@@ -88,6 +95,7 @@ export const cmsConfig: CMSConfig = {
     branch: "main",
     contentPath: "content",
   },
+  media,
   collections: {
     authors: {
       name: "Authors",

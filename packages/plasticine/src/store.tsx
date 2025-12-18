@@ -19,9 +19,14 @@ export interface CollectionConfig {
   filenameField?: string; // Field to use for filename, defaults to 'slug' or 'id'
 }
 
+export interface MediaConfig {
+  path: string; // Upload path relative to contentPath, default "uploads"
+}
+
 export interface CMSConfig {
   github: GitHubConfig;
   collections: Record<string, CollectionConfig>;
+  media?: MediaConfig;
 }
 
 export interface ContentItem {
@@ -66,7 +71,7 @@ export interface CMSActions {
   deleteItem(collection: string, id: string, sha: string): Promise<void>;
 
   // Files
-  uploadFile(file: File): Promise<string>;
+  uploadFile(file: File, fieldPath?: string): Promise<string>;
 
   // Navigation
   setCurrentCollection(name: string | null): void;
@@ -273,9 +278,11 @@ export function createCMSStore(config: CMSConfig): CMSStore {
       );
     },
 
-    async uploadFile(file: File): Promise<string> {
+    async uploadFile(file: File, fieldPath?: string): Promise<string> {
       if (!client) throw new Error("Not authenticated");
-      const { url } = await client.uploadFile(file);
+      const basePath = config.media?.path || "uploads";
+      const uploadPath = fieldPath ? `${basePath}/${fieldPath}` : basePath;
+      const { url } = await client.uploadFile(file, uploadPath);
       return url;
     },
 

@@ -203,6 +203,7 @@ export function slug(options?: {
 export function image(options?: {
   label?: string;
   accept?: string;
+  path?: string; // Upload path relative to media.path
 }) {
   return v.pipe(
     v.string(),
@@ -210,6 +211,7 @@ export function image(options?: {
       ui: "image" as const,
       label: options?.label,
       accept: options?.accept || "image/*",
+      path: options?.path,
     }))
   );
 }
@@ -220,6 +222,7 @@ export function image(options?: {
 export function file(options?: {
   label?: string;
   accept?: string;
+  path?: string; // Upload path relative to media.path
 }) {
   return v.pipe(
     v.string(),
@@ -227,6 +230,7 @@ export function file(options?: {
       ui: "file" as const,
       label: options?.label,
       accept: options?.accept,
+      path: options?.path,
     }))
   );
 }

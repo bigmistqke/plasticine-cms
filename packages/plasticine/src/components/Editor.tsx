@@ -61,14 +61,16 @@ export function Editor(props: EditorProps) {
         </div>
       </Show>
 
-      <Show when={isNew() || itemData()}>
-        <SchemaForm
-          schema={props.collection.schema.schema}
-          initialData={isNew() ? undefined : itemData()?.data}
-          onSubmit={handleSubmit}
-          onCancel={handleCancel}
-          submitLabel={isNew() ? "Create" : "Save"}
-        />
+      <Show when={isNew() || itemData()} keyed>
+        {(data) => (
+          <SchemaForm
+            schema={props.collection.schema.schema}
+            initialData={isNew() ? undefined : (data as any)?.data}
+            onSubmit={handleSubmit}
+            onCancel={handleCancel}
+            submitLabel={isNew() ? "Create" : "Save"}
+          />
+        )}
       </Show>
     </div>
   );

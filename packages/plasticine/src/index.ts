@@ -42,6 +42,7 @@ export type {
   CMSStore,
   CollectionConfig,
   ContentItem,
+  MediaConfig,
 } from "./store";
 
 // Components
