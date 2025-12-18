@@ -1,8 +1,8 @@
 import { createForm, Form } from "@formisch/solid";
-import { For, Show, createSignal } from "solid-js";
+import { createSignal, For, Show } from "solid-js";
 import type * as v from "valibot";
 import { getSchemaEntries } from "../schema";
-import { DynamicField } from "./DynamicField";
+import { DynamicField } from "./FieldComponents";
 
 interface SchemaFormProps {
   schema: v.GenericSchema;
@@ -68,11 +68,7 @@ export function SchemaForm(props: SchemaFormProps) {
             Cancel
           </button>
         </Show>
-        <button
-          type="submit"
-          class="btn btn-primary"
-          disabled={submitting()}
-        >
+        <button type="submit" class="btn btn-primary" disabled={submitting()}>
           {submitting() ? "Saving..." : props.submitLabel || "Save"}
         </button>
       </div>
