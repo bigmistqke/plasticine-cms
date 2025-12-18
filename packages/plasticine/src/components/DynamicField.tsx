@@ -1,9 +1,27 @@
-import { Field } from "@formisch/solid";
-import { Match, Switch, For, Show, createSignal } from "solid-js";
+import { Field, FieldArray, insert, remove } from "@formisch/solid";
+import { createSignal, For, Index, Match, Show, Switch } from "solid-js";
 import type * as v from "valibot";
-import { getSchemaMetadata } from "../schema";
 import type { FieldMetadata, FieldUIType } from "../fields";
+import { getSchemaMetadata } from "../schema";
 import { useCMS } from "../store";
+
+/**
+ * Check if a schema is an array type
+ */
+function isArraySchema(schema: v.GenericSchema): boolean {
+  return "type" in schema && schema.type === "array" && "item" in schema;
+}
+
+/**
+ * Check if a schema is a nested object (not a scalar field type)
+ */
+function isObjectSchema(schema: v.GenericSchema): boolean {
+  // If it has ui metadata, it's a field type (text, image, etc.), not a nested object
+  const metadata = getSchemaMetadata(schema);
+  if (metadata.ui) return false;
+
+  return "type" in schema && schema.type === "object" && "entries" in schema;
+}
 
 interface DynamicFieldProps {
   form: any;
@@ -38,7 +56,10 @@ function getFieldUIType(schema: v.GenericSchema): FieldUIType {
 /**
  * Get label from schema metadata or path
  */
-function getFieldLabel(schema: v.GenericSchema, path: readonly [string, ...(string | number)[]]): string {
+function getFieldLabel(
+  schema: v.GenericSchema,
+  path: readonly [string, ...(string | number)[]],
+): string {
   const metadata = getSchemaMetadata(schema) as Partial<FieldMetadata>;
   if (metadata.label) return metadata.label;
 
@@ -56,7 +77,35 @@ function getFieldLabel(schema: v.GenericSchema, path: readonly [string, ...(stri
 export function DynamicField(props: DynamicFieldProps) {
   const uiType = () => getFieldUIType(props.schema);
   const label = () => props.label || getFieldLabel(props.schema, props.path);
-  const metadata = () => getSchemaMetadata(props.schema) as Partial<FieldMetadata>;
+  const metadata = () =>
+    getSchemaMetadata(props.schema) as Partial<FieldMetadata>;
+
+  // Handle array schemas
+  if (isArraySchema(props.schema)) {
+    return (
+      <ArrayField
+        form={props.form}
+        path={props.path}
+        itemSchema={(props.schema as { item: v.GenericSchema }).item}
+        label={label()}
+        metadata={metadata()}
+      />
+    );
+  }
+
+  // Handle nested object schemas
+  if (isObjectSchema(props.schema)) {
+    return (
+      <ObjectField
+        form={props.form}
+        path={props.path}
+        entries={
+          (props.schema as { entries: Record<string, v.GenericSchema> }).entries
+        }
+        label={label()}
+      />
+    );
+  }
 
   return (
     <Field of={props.form} path={props.path}>
@@ -256,7 +305,10 @@ function ImageInput(props: InputProps) {
       }
     } catch (err) {
       console.error("Upload failed:", err);
-      alert("Upload failed: " + (err instanceof Error ? err.message : "Unknown error"));
+      alert(
+        "Upload failed: " +
+          (err instanceof Error ? err.message : "Unknown error"),
+      );
     } finally {
       setUploading(false);
     }
@@ -285,11 +337,7 @@ function ImageInput(props: InputProps) {
         </label>
       </div>
       <Show when={value()}>
-        <img
-          src={value()}
-          alt="Preview"
-          class="image-preview"
-        />
+        <img src={value()} alt="Preview" class="image-preview" />
       </Show>
     </div>
   );
@@ -335,4 +383,137 @@ function ReferenceInput(props: InputProps) {
       </For>
     </select>
   );
+}
+
+// Object Field Component (for nested objects)
+interface ObjectFieldProps {
+  form: any;
+  path: readonly [string, ...(string | number)[]];
+  entries: Record<string, v.GenericSchema>;
+  label: string;
+}
+
+function ObjectField(props: ObjectFieldProps) {
+  return (
+    <div class="field object-field">
+      <label class="field-label">{props.label}</label>
+      <div class="object-field-entries">
+        <For each={Object.entries(props.entries)}>
+          {([key, fieldSchema]) => (
+            <DynamicField
+              form={props.form}
+              path={[...props.path, key]}
+              schema={fieldSchema}
+            />
+          )}
+        </For>
+      </div>
+    </div>
+  );
+}
+
+// Array Field Component
+interface ArrayFieldProps {
+  form: any;
+  path: readonly [string, ...(string | number)[]];
+  itemSchema: v.GenericSchema;
+  label: string;
+  metadata: Partial<FieldMetadata>;
+}
+
+function ArrayField(props: ArrayFieldProps) {
+  const handleAdd = () => {
+    insert(props.form, {
+      path: props.path,
+      initialInput: getDefaultValue(props.itemSchema) as any,
+    });
+  };
+
+  const handleRemove = (index: number) => {
+    remove(props.form, {
+      path: props.path,
+      at: index,
+    });
+  };
+
+  return (
+    <FieldArray of={props.form} path={props.path}>
+      {(fieldArray) => (
+        <div class="field array-field">
+          <div class="array-field-header">
+            <label class="field-label">{props.label}</label>
+            <button
+              type="button"
+              class="btn btn-small btn-secondary"
+              onClick={handleAdd}
+            >
+              + Add
+            </button>
+          </div>
+
+          <div class="array-field-items">
+            <Index each={fieldArray.items}>
+              {(_, index) => (
+                <div class="array-field-item">
+                  <div class="array-field-item-content">
+                    <DynamicField
+                      form={props.form}
+                      path={[...props.path, index]}
+                      schema={props.itemSchema}
+                      label={`${props.label} ${index + 1}`}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    class="btn btn-small btn-danger array-field-remove"
+                    onClick={() => handleRemove(index)}
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
+            </Index>
+          </div>
+
+          <Show when={fieldArray.items.length === 0}>
+            <div class="array-field-empty">
+              No items yet. Click "Add" to create one.
+            </div>
+          </Show>
+        </div>
+      )}
+    </FieldArray>
+  );
+}
+
+/**
+ * Get default value for a schema type
+ */
+function getDefaultValue(schema: v.GenericSchema): unknown {
+  if (!("type" in schema)) return undefined;
+
+  switch (schema.type) {
+    case "string":
+      return "";
+    case "number":
+      return 0;
+    case "boolean":
+      return false;
+    case "array":
+      return [];
+    case "object":
+      // For objects, create default values for each entry
+      if ("entries" in schema && typeof schema.entries === "object") {
+        const entries = schema.entries as Record<string, v.GenericSchema>;
+        return Object.fromEntries(
+          Object.entries(entries).map(([key, fieldSchema]) => [
+            key,
+            getDefaultValue(fieldSchema),
+          ]),
+        );
+      }
+      return {};
+    default:
+      return undefined;
+  }
 }

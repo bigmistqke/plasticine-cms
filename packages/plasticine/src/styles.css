@@ -781,3 +781,107 @@
   color: var(--color-text-muted);
   border-top: 1px solid var(--color-border);
 }
+
+/* Array Fields */
+.array-field {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  background: var(--color-bg);
+}
+
+.array-field-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.array-field-header .field-label {
+  margin: 0;
+}
+
+.array-field-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.array-field-item {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 0.75rem;
+}
+
+.array-field-item-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.array-field-item-content .field {
+  margin: 0;
+}
+
+.array-field-item-content .field-label {
+  display: none;
+}
+
+.array-field-remove {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.array-field-empty {
+  padding: 1rem;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  background: var(--color-surface);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius);
+}
+
+/* Nested Object Fields */
+.object-field {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  background: var(--color-bg);
+}
+
+.object-field > .field-label {
+  margin-bottom: 0.75rem;
+  display: block;
+}
+
+.object-field-entries {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 0.75rem;
+}
+
+/* Nested array within object styling */
+.object-field .array-field,
+.array-field-item .object-field {
+  background: var(--color-surface);
+}
+
+.object-field .array-field .array-field-item,
+.array-field-item .object-field .object-field-entries {
+  background: var(--color-bg);
+}
