@@ -1,4 +1,4 @@
-import { readdir, readFile, writeFile, mkdir } from "node:fs/promises";
+import { readdir, readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { existsSync } from "node:fs";
 
@@ -8,16 +8,9 @@ interface MigrateOptions {
   dryRun?: boolean;
 }
 
-interface CollectionConfig {
-  name: string;
-  schema: {
-    parse: (value: unknown) => unknown;
-  };
-  filenameField?: string;
-}
-
-interface CMSConfig {
-  collections: Record<string, CollectionConfig>;
+interface VersionedConfig {
+  getCollections(): string[];
+  parseCollection(name: string, data: unknown): unknown;
 }
 
 export async function migrate(options: MigrateOptions) {
@@ -30,12 +23,12 @@ export async function migrate(options: MigrateOptions) {
   console.log("");
 
   // Dynamically import the config
-  let config: CMSConfig;
+  let config: VersionedConfig;
   try {
     const module = await import(configPath);
-    config = module.cmsConfig;
-    if (!config) {
-      console.error("Error: cmsConfig not found in config file");
+    config = module.default || module.config;
+    if (!config || typeof config.getCollections !== "function") {
+      console.error("Error: Invalid config - expected VersionedConfig from defineConfig()");
       process.exit(1);
     }
   } catch (err) {
@@ -48,10 +41,10 @@ export async function migrate(options: MigrateOptions) {
   let errorFiles = 0;
 
   // Process each collection
-  for (const [collectionKey, collectionConfig] of Object.entries(config.collections)) {
-    const collectionPath = join(contentPath, collectionKey);
+  for (const collectionName of config.getCollections()) {
+    const collectionPath = join(contentPath, collectionName);
 
-    console.log(`\n📁 Collection: ${collectionConfig.name} (${collectionKey})`);
+    console.log(`\n📁 Collection: ${collectionName}`);
 
     if (!existsSync(collectionPath)) {
       console.log(`   Directory doesn't exist, skipping`);
@@ -76,8 +69,8 @@ export async function migrate(options: MigrateOptions) {
         const content = await readFile(filePath, "utf-8");
         const original = JSON.parse(content);
 
-        // Parse through versioned schema (auto-migrates)
-        const migrated = collectionConfig.schema.parse(original);
+        // Parse through versioned config (auto-migrates)
+        const migrated = config.parseCollection(collectionName, original);
 
         // Check if data changed
         const originalStr = JSON.stringify(original, null, 2);
