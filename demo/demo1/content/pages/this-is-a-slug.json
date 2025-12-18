@@ -1,0 +1,6 @@
+{
+  "slug": "this-is-a-slug",
+  "title": "with a title!",
+  "content": "## and even a subtitle\n\n```tsx\n<CodeBlock/>\n```",
+  "template": "landing"
+}
