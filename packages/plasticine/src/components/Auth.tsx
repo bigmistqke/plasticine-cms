@@ -1,4 +1,4 @@
-import { Show, createSignal } from "solid-js";
+import { Match, Show, Switch, createSignal } from "solid-js";
 import { useCMS } from "../store";
 
 /**
@@ -28,81 +28,77 @@ export function Auth() {
           <div class="auth-error">{state.authError}</div>
         </Show>
 
-        {/* Device Flow OAuth */}
-        <Show when={!useToken() && !state.deviceCode}>
-          <button
-            class="btn btn-primary btn-large"
-            onClick={() => actions.startOAuth()}
-            disabled={state.authLoading}
-          >
-            {state.authLoading ? "Starting..." : "Login with GitHub"}
-          </button>
+        <Switch
+          fallback={
+            /* Device Flow requires a proxy for browsers - disabled for now */
+            <>
+              <button
+                class="btn btn-primary btn-large"
+                onClick={() => actions.startOAuth()}
+                disabled={state.authLoading}
+              >
+                {state.authLoading ? "Starting..." : "Login with GitHub"}
+              </button>
 
-          <button
-            class="btn btn-link"
-            onClick={() => setUseToken(true)}
-          >
-            Or use a Personal Access Token
-          </button>
-        </Show>
-
-        {/* Device Code Display */}
-        <Show when={state.deviceCode}>
-          <div class="device-code-flow">
-            <p>Go to:</p>
-            <a
-              href={state.deviceCode!.verification_uri}
-              target="_blank"
-              rel="noopener noreferrer"
-              class="verification-url"
-            >
-              {state.deviceCode!.verification_uri}
-            </a>
-
-            <p>And enter this code:</p>
-            <div class="user-code">{state.deviceCode!.user_code}</div>
-
-            <p class="waiting-text">
-              Waiting for authorization...
-            </p>
-          </div>
-        </Show>
-
-        {/* Token Input */}
-        <Show when={useToken() && !state.deviceCode}>
-          <form onSubmit={handleTokenSubmit} class="token-form">
-            <p class="token-instructions">
-              Create a{" "}
+              <button class="btn btn-link" onClick={() => setUseToken(true)}>
+                Or use a Personal Access Token
+              </button>
+            </>
+          }
+        >
+          {/* Device Code Display */}
+          <Match when={state.deviceCode}>
+            <div class="device-code-flow">
+              <p>Go to:</p>
               <a
-                href="https://github.com/settings/tokens/new?scopes=repo&description=Plasticine%20CMS"
+                href={state.deviceCode!.verification_uri}
                 target="_blank"
                 rel="noopener noreferrer"
+                class="verification-url"
               >
-                Personal Access Token
-              </a>{" "}
-              with <code>repo</code> scope.
-            </p>
+                {state.deviceCode!.verification_uri}
+              </a>
 
-            <input
-              type="password"
-              class="input"
-              placeholder="ghp_xxxxxxxxxxxx"
-              value={tokenInput()}
-              onInput={(e) => setTokenInput(e.currentTarget.value)}
-              disabled={state.authLoading}
-            />
+              <p>And enter this code:</p>
+              <div class="user-code">{state.deviceCode!.user_code}</div>
 
-            <button
-              type="submit"
-              class="btn btn-primary"
-              disabled={state.authLoading || !tokenInput().trim()}
-            >
-              {state.authLoading ? "Verifying..." : "Login"}
-            </button>
+              <p class="waiting-text">Waiting for authorization...</p>
+            </div>
+          </Match>
+          {/* Token Input */}
+          <Match when={useToken()}>
+            <form onSubmit={handleTokenSubmit} class="token-form">
+              <p class="token-instructions">
+                Create a{" "}
+                <a
+                  href="https://github.com/settings/tokens/new?scopes=repo&description=Plasticine%20CMS"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Personal Access Token
+                </a>{" "}
+                with <code>repo</code> scope.
+              </p>
 
-{/* Device Flow requires a proxy for browsers - disabled for now */}
-          </form>
-        </Show>
+              <input
+                type="password"
+                class="input"
+                placeholder="ghp_xxxxxxxxxxxx"
+                value={tokenInput()}
+                onInput={(e) => setTokenInput(e.currentTarget.value)}
+                disabled={state.authLoading}
+              />
+
+              <button
+                type="submit"
+                class="btn btn-primary"
+                disabled={state.authLoading || !tokenInput().trim()}
+              >
+                {state.authLoading ? "Verifying..." : "Login"}
+              </button>
+            </form>
+          </Match>
+        </Switch>
       </div>
     </div>
   );
