@@ -1,13 +1,6 @@
-import type { Component } from 'solid-js';
-import Comp from './Comp';
+import { CMS } from "./plasticine";
+import { cmsConfig } from "./plasticine.config";
 
-const App: Component = () => {
-  return (
-    <>
-      <h1>Hello world!!!!</h1>
-      <Comp />
-    </>
-  );
-};
-
-export default App;
+export default function App() {
+  return <CMS config={cmsConfig} />;
+}

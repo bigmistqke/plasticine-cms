@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@formisch/solid':
+        specifier: ^0.7.5
+        version: 0.7.5(solid-js@1.9.9)(typescript@5.9.2)(valibot@1.2.0(typescript@5.9.2))
       solid-js:
         specifier: ^1.9.5
         version: 1.9.9
@@ -272,6 +275,16 @@ packages:
     engines: {node: '>=18'}
     cpu: [x64]
     os: [win32]
+
+  '@formisch/solid@0.7.5':
+    resolution: {integrity: sha512-qlhD56FSW9t3Yyu3C6w4Wy81roBLkdMyvUbtX5DLJXfEai2f/TKM0SdDwwdGnTOSW/IS4VjCHrlu1vOlvZg3Sg==}
+    peerDependencies:
+      solid-js: ^1.6.0
+      typescript: '>=5'
+      valibot: ^1.0.0
+    peerDependenciesMeta:
+      typescript:
+        optional: true
 
   '@jridgewell/gen-mapping@0.3.13':
     resolution: {integrity: sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA==}
@@ -927,6 +940,13 @@ snapshots:
 
   '@esbuild/win32-x64@0.25.11':
     optional: true
+
+  '@formisch/solid@0.7.5(solid-js@1.9.9)(typescript@5.9.2)(valibot@1.2.0(typescript@5.9.2))':
+    dependencies:
+      solid-js: 1.9.9
+      valibot: 1.2.0(typescript@5.9.2)
+    optionalDependencies:
+      typescript: 5.9.2
 
   '@jridgewell/gen-mapping@0.3.13':
     dependencies:
