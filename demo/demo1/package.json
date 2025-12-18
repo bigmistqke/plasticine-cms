@@ -12,6 +12,7 @@
     "dev": "vite",
     "build": "vite build",
     "serve": "vite preview",
+    "admin": "vite --config plasticine/vite.config.ts",
     "migrate": "plasticine migrate",
     "migrate:dry": "plasticine migrate --dry-run"
   },
