@@ -372,6 +372,13 @@ export function createCMSStore(props: CMSProps): CMSStore {
     async deleteMedia(url: string, path: string, sha: string): Promise<void> {
       if (!client) throw new Error("Not authenticated");
 
+      // Ensure all collections are loaded before checking references
+      for (const collectionName of collections) {
+        if (state.collections[collectionName]?.items.length === 0 && !state.collections[collectionName]?.loading) {
+          await actions.loadCollection(collectionName);
+        }
+      }
+
       // Find and update all references
       const references = actions.getMediaReferences(url);
 

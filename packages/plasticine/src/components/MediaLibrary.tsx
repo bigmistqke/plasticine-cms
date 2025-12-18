@@ -7,9 +7,20 @@ import { useCMS, type MediaFile } from "../store";
 export function MediaLibrary() {
   const [state, actions] = useCMS();
   const [deleting, setDeleting] = createSignal<string | null>(null);
+  const [collectionsLoaded, setCollectionsLoaded] = createSignal(false);
 
-  onMount(() => {
-    actions.loadMedia();
+  onMount(async () => {
+    // Load media files
+    await actions.loadMedia();
+
+    // Load all collections to get accurate reference counts
+    const collections = Object.keys(state.collections);
+    for (const name of collections) {
+      if (state.collections[name]?.items.length === 0) {
+        await actions.loadCollection(name);
+      }
+    }
+    setCollectionsLoaded(true);
   });
 
   const isImage = (name: string) => {
