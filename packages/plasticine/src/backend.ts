@@ -41,7 +41,7 @@ export interface FileContent {
   sha?: string;
 }
 
-export interface FilesBackend {
+export interface ConfigBackend {
   readFile(path: string): Promise<FileContent>;
   writeFile(path: string, content: string, sha?: string): Promise<{ sha?: string }>;
 }
@@ -49,5 +49,5 @@ export interface FilesBackend {
 export interface Backend {
   content: ContentBackend;
   media: MediaBackend;
-  files: FilesBackend;
+  config: ConfigBackend;
 }

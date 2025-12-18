@@ -475,7 +475,7 @@ export const tokenStorage = {
  * Create a GitHub backend for Plasticine.
  * Returns { content, media } that both use the same GitHubClient.
  */
-import type { Backend, ContentBackend, MediaBackend, FilesBackend, ContentItem, MediaFile } from "./backend";
+import type { Backend, ConfigBackend, ContentBackend, ContentItem, MediaBackend, MediaFile } from "./backend";
 
 export interface GitHubBackendConfig extends GitHubConfig {
   token: string;
@@ -560,7 +560,7 @@ export function createGitHubBackend(config: GitHubBackendConfig): Backend {
     },
   };
 
-  const files: FilesBackend = {
+  const configBackend: ConfigBackend = {
     async readFile(path: string) {
       const url = `https://api.github.com/repos/${config.owner}/${config.repo}/contents/${path}?ref=${branch}`;
       const response = await fetch(url, {
@@ -603,7 +603,7 @@ export function createGitHubBackend(config: GitHubBackendConfig): Backend {
     },
   };
 
-  return { content, media, files };
+  return { content, media, config: configBackend };
 }
 
 /**
