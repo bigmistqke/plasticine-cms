@@ -337,7 +337,7 @@ export class GitHubClient {
         method: "PUT",
         headers: this.headers,
         body: JSON.stringify({
-          message: `Upload ${file.name}`,
+          message: `cms: Upload ${file.name}`,
           content: base64,
           branch: this.config.branch,
         }),

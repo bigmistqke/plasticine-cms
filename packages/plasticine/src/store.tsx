@@ -309,8 +309,8 @@ export function createCMSStore(props: CMSProps): CMSStore {
       const parsed = config.parseCollection(collection, data) as Record<string, unknown>;
       const filename = getFilename(collection, parsed);
       const message = existingSha
-        ? `Update ${collection}/${filename}`
-        : `Create ${collection}/${filename}`;
+        ? `cms: Update ${collection}/${filename}`
+        : `cms: Create ${collection}/${filename}`;
 
       const { sha } = await client.saveJSON(collection, filename, parsed, message, existingSha);
 
@@ -336,7 +336,7 @@ export function createCMSStore(props: CMSProps): CMSStore {
       if (!client) throw new Error("Not authenticated");
 
       const filename = `${id}.json`;
-      const message = `Delete ${collection}/${filename}`;
+      const message = `cms: Delete ${collection}/${filename}`;
 
       await client.deleteFile(collection, filename, message, sha);
 
@@ -416,7 +416,7 @@ export function createCMSStore(props: CMSProps): CMSStore {
       }
 
       // Delete the media file
-      await client.deleteFileByPath(path, `Delete media: ${path}`, sha);
+      await client.deleteFileByPath(path, `cms: Delete media ${path}`, sha);
 
       // Remove from local state
       setState(
