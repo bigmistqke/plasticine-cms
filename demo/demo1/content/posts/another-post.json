@@ -1,0 +1,9 @@
+{
+  "slug": "another-post",
+  "title": "yeyaaa",
+  "cover": "https://raw.githubusercontent.com/bigmistqke/plasticine-cms/main/demo/demo1/content/uploads/covers/1766076843516-23.png",
+  "content": "# this is some markdown",
+  "author": "big-mistqke",
+  "draft": false,
+  "publishedAt": "2025-12-18"
+}
