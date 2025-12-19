@@ -11,6 +11,7 @@
     "start": "vite",
     "dev": "vite",
     "build": "vite build",
+    "build:admin": "vite build --config plasticine/vite.config.ts",
     "serve": "vite preview",
     "admin": "vite --config plasticine/vite.config.ts",
     "migrate": "plasticine migrate",
