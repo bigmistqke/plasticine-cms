@@ -1,10 +1,15 @@
+import { useAction, useSubmission } from '@solidjs/router'
 import { createEffect, createSignal, onMount, Show } from 'solid-js'
+import { saveSchemaAction } from '../actions'
 import { useCMS } from '../context'
 
 export function SchemaEditor() {
   const [state, actions] = useCMS()
   const [localContent, setLocalContent] = createSignal('')
   const [isDirty, setIsDirty] = createSignal(false)
+
+  const saveSchema = useAction(saveSchemaAction)
+  const submission = useSubmission(saveSchemaAction)
 
   // Load schema on mount if not already loaded
   onMount(() => {
@@ -20,19 +25,21 @@ export function SchemaEditor() {
     }
   })
 
+  // Reset dirty state on successful save
+  createEffect(() => {
+    if (submission.result?.ok) {
+      setIsDirty(false)
+    }
+  })
+
   const handleChange = (e: Event) => {
     const value = (e.target as HTMLTextAreaElement).value
     setLocalContent(value)
     setIsDirty(value !== state.schema.content)
   }
 
-  const handleSave = async () => {
-    try {
-      await actions.saveSchema(localContent())
-      setIsDirty(false)
-    } catch (error) {
-      console.error('Failed to save schema:', error)
-    }
+  const handleSave = () => {
+    saveSchema(localContent(), actions)
   }
 
   const handleReset = () => {
@@ -46,22 +53,22 @@ export function SchemaEditor() {
         <h2>Schema Editor</h2>
         <div class="schema-editor-actions">
           <Show when={isDirty()}>
-            <button class="btn btn-secondary" onClick={handleReset} disabled={state.schema.saving}>
+            <button class="btn btn-secondary" onClick={handleReset} disabled={submission.pending}>
               Reset
             </button>
           </Show>
           <button
             class="btn btn-primary"
             onClick={handleSave}
-            disabled={!isDirty() || state.schema.saving}
+            disabled={!isDirty() || submission.pending}
           >
-            {state.schema.saving ? 'Saving...' : 'Save'}
+            {submission.pending ? 'Saving...' : 'Save'}
           </button>
         </div>
       </div>
 
-      <Show when={state.schema.error}>
-        <div class="schema-editor-error">{state.schema.error}</div>
+      <Show when={submission.error}>
+        <div class="schema-editor-error">{String(submission.error)}</div>
       </Show>
 
       <Show

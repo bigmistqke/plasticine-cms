@@ -1,5 +1,6 @@
-import { A } from '@solidjs/router'
-import { For, Show, createSignal } from 'solid-js'
+import { A, useAction, useSubmission } from '@solidjs/router'
+import { For, Show } from 'solid-js'
+import { deleteItemAction } from '../actions'
 import { useCMS } from '../context'
 
 interface ItemListProps {
@@ -11,7 +12,9 @@ interface ItemListProps {
  */
 export function ItemList(props: ItemListProps) {
   const [state, actions] = useCMS()
-  const [deleting, setDeleting] = createSignal<string | null>(null)
+
+  const deleteItem = useAction(deleteItemAction)
+  const submission = useSubmission(deleteItemAction)
 
   const collectionState = () => state.collections[props.collectionKey]
   const items = () => collectionState()?.items || []
@@ -24,15 +27,16 @@ export function ItemList(props: ItemListProps) {
     return (data.title as string) || (data.name as string) || (data.slug as string) || 'Untitled'
   }
 
-  const handleDelete = async (id: string, sha: string) => {
+  const handleDelete = (id: string, sha?: string) => {
     if (!confirm('Are you sure you want to delete this item?')) return
+    deleteItem(props.collectionKey, id, sha, actions)
+  }
 
-    setDeleting(id)
-    try {
-      await actions.deleteItem(props.collectionKey, id, sha)
-    } finally {
-      setDeleting(null)
-    }
+  // Check if a specific item is being deleted
+  const isDeletingItem = (id: string) => {
+    if (!submission.pending) return false
+    const input = submission.input
+    return Array.isArray(input) && input[1] === id
   }
 
   return (
@@ -74,9 +78,9 @@ export function ItemList(props: ItemListProps) {
                   e.stopPropagation()
                   handleDelete(item.id, item.sha)
                 }}
-                disabled={deleting() === item.id}
+                disabled={isDeletingItem(item.id)}
               >
-                {deleting() === item.id ? '...' : 'Delete'}
+                {isDeletingItem(item.id) ? '...' : 'Delete'}
               </button>
             </li>
           )}

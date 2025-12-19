@@ -1,8 +1,9 @@
-import { useNavigate } from '@solidjs/router'
+import { useAction, useNavigate, useSubmission } from '@solidjs/router'
 import { Show } from 'solid-js'
 import type * as v from 'valibot'
+import { saveItemAction } from '../actions'
+import { type ContentItem } from '../backend/types'
 import { useCMS } from '../context'
-import { type ContentItem } from '../store'
 import { SchemaForm } from './SchemaForm'
 
 interface EditorProps {
@@ -17,6 +18,9 @@ interface EditorProps {
 export function Editor(props: EditorProps) {
   const [state, actions] = useCMS()
   const navigate = useNavigate()
+
+  const saveItem = useAction(saveItemAction)
+  const submission = useSubmission(saveItemAction)
 
   const isNew = () => props.itemId === '__new__'
 
@@ -33,7 +37,7 @@ export function Editor(props: EditorProps) {
 
   const handleSubmit = async (data: Record<string, unknown>) => {
     const existingSha = itemData()?.sha
-    await actions.saveItem(props.collectionKey, data, existingSha)
+    await saveItem(props.collectionKey, data, existingSha, actions)
 
     // If was new, navigate to the created item
     if (isNew()) {
@@ -65,6 +69,8 @@ export function Editor(props: EditorProps) {
             onSubmit={handleSubmit}
             onCancel={handleCancel}
             submitLabel={isNew() ? 'Create' : 'Save'}
+            pending={submission.pending}
+            error={submission.error ? String(submission.error) : undefined}
           />
         )}
       </Show>

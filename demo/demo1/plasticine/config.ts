@@ -1,5 +1,4 @@
-import { boolean, date, image, markdown, reference, select, slug, text, textarea, } from "@plasticine/core/fields";
-import { defineConfig, schema } from "@plasticine/core/schema";
+import { boolean, date, defineConfig, image, markdown, reference, schema, select, slug, text, textarea, } from "@plasticine/core";
 import { array, object, optional } from "valibot";
 
 export default defineConfig({
