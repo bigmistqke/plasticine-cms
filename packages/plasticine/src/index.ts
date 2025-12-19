@@ -3,6 +3,9 @@ export * from "./config/define-config"
 export * from './config/fields'
 export * from './config/schema'
 
+// Client
+export * from './client'
+
 // Backend
 export * from './backend/github'
 export * from './backend/types'
