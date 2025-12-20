@@ -1,4 +1,4 @@
-import { createClient, createGitHubFetcher, Infer } from '@plasticine/core'
+import { createGitHubClient, Infer } from '@plasticine/core'
 import { createResource, For, Show, Suspense } from 'solid-js'
 import config from '../plasticine/config'
 import './App.css'
@@ -8,15 +8,12 @@ type Author = Infer<typeof config.collections.authors>
 type Post = Infer<typeof config.collections.posts>
 
 // Create type-safe content client
-const content = createClient(
-  config,
-  createGitHubFetcher({
-    owner: import.meta.env.VITE_GITHUB_OWNER || 'bigmistqke',
-    repo: import.meta.env.VITE_GITHUB_REPO || 'plasticine-cms',
-    branch: import.meta.env.VITE_GITHUB_BRANCH || 'main',
-    contentPath: import.meta.env.VITE_GITHUB_CONTENT_PATH || 'demo/demo1/content',
-  }),
-)
+const content = createGitHubClient(config, {
+  owner: import.meta.env.VITE_GITHUB_OWNER || 'bigmistqke',
+  repo: import.meta.env.VITE_GITHUB_REPO || 'plasticine-cms',
+  branch: import.meta.env.VITE_GITHUB_BRANCH || 'main',
+  contentPath: import.meta.env.VITE_GITHUB_CONTENT_PATH || 'demo/demo1/content',
+})
 
 function PostCard(props: { post: Post; authors: Author[] }) {
   const author = () => props.authors.find(a => a.slug === props.post.author)

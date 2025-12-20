@@ -21,9 +21,9 @@ export interface ContentFetcher {
 }
 
 /**
- * GitHub fetcher configuration
+ * GitHub client configuration
  */
-export interface GitHubFetcherOptions {
+export interface GitHubClientOptions {
   owner: string
   repo: string
   branch?: string
@@ -31,10 +31,7 @@ export interface GitHubFetcherOptions {
   contentPath?: string
 }
 
-/**
- * Create a GitHub content fetcher
- */
-export function createGitHubFetcher(options: GitHubFetcherOptions): ContentFetcher {
+function createGitHubFetcher(options: GitHubClientOptions): ContentFetcher {
   const { owner, repo, branch = 'main', contentPath = 'content' } = options
 
   const baseUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${contentPath}`
@@ -81,6 +78,31 @@ export function createGitHubFetcher(options: GitHubFetcherOptions): ContentFetch
 }
 
 /**
+ * Create a type-safe GitHub content client
+ *
+ * @example
+ * ```ts
+ * import { createGitHubClient } from '@plasticine/core'
+ * import config from './plasticine/config'
+ *
+ * const content = createGitHubClient(config, {
+ *   owner: 'myuser',
+ *   repo: 'my-site',
+ * })
+ *
+ * // Fully typed!
+ * const authors = await content.authors.getAll()
+ * const author = await content.authors.get('john-doe')
+ * ```
+ */
+export function createGitHubClient<TCollections extends CollectionsConfig>(
+  config: PlasticineConfig<TCollections>,
+  options: GitHubClientOptions,
+): PlasticineClient<TCollections> {
+  return createClient(config, createGitHubFetcher(options))
+}
+
+/**
  * Collection accessor with typed methods
  */
 export interface CollectionAccessor<TOutput> {
@@ -105,24 +127,20 @@ export type PlasticineClient<TCollections extends CollectionsConfig> = {
 }
 
 /**
- * Create a type-safe content client
+ * Create a type-safe content client with a custom fetcher
  *
  * @example
  * ```ts
- * import { config } from './plasticine/config'
- * import { createClient, createGitHubFetcher } from '@plasticine/core'
+ * import { createClient, ContentFetcher } from '@plasticine/core'
+ * import config from './plasticine/config'
  *
- * const fetcher = createGitHubFetcher({
- *   owner: 'myuser',
- *   repo: 'my-site',
- *   branch: 'main',
- * })
+ * const myFetcher: ContentFetcher = {
+ *   listItems: (collection) => fetch(`/api/${collection}`).then(r => r.json()),
+ *   getItem: (collection, id) => fetch(`/api/${collection}/${id}`).then(r => r.json()),
+ *   hasItem: (collection, id) => fetch(`/api/${collection}/${id}`, { method: 'HEAD' }).then(r => r.ok),
+ * }
  *
- * const content = createClient(config, fetcher)
- *
- * // Fully typed!
- * const authors = await content.authors.getAll()
- * const author = await content.authors.get('john-doe')
+ * const content = createClient(config, myFetcher)
  * ```
  */
 export function createClient<TCollections extends CollectionsConfig>(
