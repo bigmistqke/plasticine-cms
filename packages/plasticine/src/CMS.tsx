@@ -7,11 +7,11 @@ import { Editor } from './components/Editor'
 import { ItemList } from './components/ItemList'
 import { MediaLibrary } from './components/MediaLibrary'
 import { SchemaEditor } from './components/SchemaEditor'
-import type { PlasticineConfig } from './config/define-config'
+import type { CollectionsConfig, PlasticineConfig } from './config/define-config'
 import { CMSProvider, useCMS } from './context'
 
-interface CMSProps {
-  config: PlasticineConfig
+interface CMSProps<T extends CollectionsConfig = CollectionsConfig> {
+  config: PlasticineConfig<T>
   backend: BackendFactory
   schemaPath?: string
   basePath?: string
@@ -32,7 +32,7 @@ function Welcome() {
 /**
  * Route component for editing an item
  */
-function EditorRoute(props: { config: PlasticineConfig }) {
+function EditorRoute(props: { config: PlasticineConfig<any> }) {
   const params = useParams<{ collection: string; item: string }>()
   const schema = () => props.config.getSchema(params.collection)
 
@@ -54,7 +54,7 @@ function ItemListRoute() {
 /**
  * Main CMS layout component - wraps route content
  */
-function CMSLayout(props: { config: PlasticineConfig; children?: JSX.Element }) {
+function CMSLayout(props: { config: PlasticineConfig<any>; children?: JSX.Element }) {
   const [state, actions] = useCMS()
 
   return (
@@ -112,7 +112,7 @@ function CMSLayout(props: { config: PlasticineConfig; children?: JSX.Element }) 
 /**
  * Auth gate wrapper component
  */
-function AuthGate(props: { config: PlasticineConfig; children: any }) {
+function AuthGate(props: { config: PlasticineConfig<any>; children: any }) {
   const [state] = useCMS()
 
   return (
@@ -137,7 +137,7 @@ function AuthGate(props: { config: PlasticineConfig; children: any }) {
 /**
  * Full CMS application with auth gate
  */
-export function CMS(props: CMSProps) {
+export function CMS<T extends CollectionsConfig>(props: CMSProps<T>) {
   return (
     <Router
       base={props.basePath}

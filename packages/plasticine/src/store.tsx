@@ -5,7 +5,7 @@ import type { PlasticineConfig } from './config/define-config'
 import { getSchemaEntries, getSchemaMetadata } from './config/schema'
 
 export interface CMSProps {
-  config: PlasticineConfig
+  config: PlasticineConfig<any>
   backend: BackendFactory
   schemaPath?: string
 }

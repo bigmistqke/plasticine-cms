@@ -15,7 +15,8 @@
     "serve": "vite preview",
     "admin": "vite --config plasticine/vite.config.ts",
     "migrate": "plasticine migrate",
-    "migrate:dry": "plasticine migrate --dry-run"
+    "migrate:dry": "plasticine migrate --dry-run",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@plasticine/cli": "workspace:*",

@@ -1,6 +1,18 @@
 import * as v from 'valibot'
 import { Prettify } from '../types'
 
+/**
+ * Infer the output type from a VersionedSchema
+ * @example
+ * ```ts
+ * import { Infer } from '@plasticine/core'
+ * import config from './plasticine/config'
+ *
+ * type Author = Infer<typeof config.collections.authors>
+ * ```
+ */
+export type Infer<T extends { schema: v.GenericSchema }> = v.InferOutput<T['schema']>
+
 class SchemaError<
   TSchema extends
     | v.BaseSchema<unknown, unknown, v.BaseIssue<unknown>>

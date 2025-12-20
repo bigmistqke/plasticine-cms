@@ -5,7 +5,9 @@
   "description": "Git-based CMS with schema migrations",
   "type": "module",
   "scripts": {
-    "typecheck": "pnpm --filter @plasticine/core exec tsc --noEmit",
+    "typecheck": "pnpm --filter @plasticine/core typecheck && pnpm --filter @plasticine/demo1 typecheck",
+    "typecheck:core": "pnpm --filter @plasticine/core typecheck",
+    "typecheck:demo": "pnpm --filter @plasticine/demo1 typecheck",
     "format": "prettier --write \"packages/plasticine/src/**/*.{ts,tsx}\""
   },
   "devDependencies": {

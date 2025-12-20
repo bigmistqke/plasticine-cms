@@ -9,7 +9,7 @@ import { CMSStore, createCMSStore } from './store'
 const CMSContext = createContext<CMSStore>()
 
 export function CMSProvider(props: {
-  config: PlasticineConfig
+  config: PlasticineConfig<any>
   backend: BackendFactory
   schemaPath?: string
   children: JSX.Element

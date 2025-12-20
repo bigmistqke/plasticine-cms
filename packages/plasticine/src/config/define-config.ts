@@ -1,7 +1,12 @@
 import * as v from 'valibot'
-import { VersionedSchema } from './schema'
 
-export type CollectionsConfig = Record<string, VersionedSchema<any[], v.GenericSchema>>
+/** Base type for versioned schema - used for constraints */
+export interface VersionedSchemaBase {
+  schema: v.GenericSchema
+  parse(value: unknown): unknown
+}
+
+export type CollectionsConfig = Record<string, VersionedSchemaBase>
 
 export interface PlasticineConfig<TCollections extends CollectionsConfig = CollectionsConfig> {
   /** The raw collections config (for type inference) */

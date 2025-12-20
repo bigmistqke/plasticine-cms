@@ -64,6 +64,10 @@ importers:
       valibot:
         specifier: ^1.0.0
         version: 1.2.0(typescript@5.9.2)
+    devDependencies:
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.2
 
   packages/workflows: {}
 

@@ -1,5 +1,10 @@
 import type * as v from 'valibot'
-import type { CollectionsConfig, PlasticineConfig } from './config/define-config'
+import type { CollectionsConfig, PlasticineConfig, VersionedSchemaBase } from './config/define-config'
+
+/**
+ * Extract the output type from a VersionedSchema
+ */
+type InferVersionedOutput<T extends VersionedSchemaBase> = v.InferOutput<T['schema']>
 
 /**
  * Content fetcher interface - abstraction for fetching raw content
@@ -78,15 +83,15 @@ export function createGitHubFetcher(options: GitHubFetcherOptions): ContentFetch
 /**
  * Collection accessor with typed methods
  */
-export interface CollectionAccessor<TSchema extends v.GenericSchema> {
+export interface CollectionAccessor<TOutput> {
   /** List all item IDs in this collection */
   list(): Promise<string[]>
 
   /** Get a single item by ID */
-  get(id: string): Promise<v.InferOutput<TSchema>>
+  get(id: string): Promise<TOutput>
 
   /** Get all items in this collection */
-  getAll(): Promise<Array<{ id: string; data: v.InferOutput<TSchema> }>>
+  getAll(): Promise<Array<{ id: string; data: TOutput }>>
 
   /** Check if an item exists */
   has(id: string): Promise<boolean>
@@ -96,7 +101,7 @@ export interface CollectionAccessor<TSchema extends v.GenericSchema> {
  * Client type - provides typed access to all collections
  */
 export type PlasticineClient<TCollections extends CollectionsConfig> = {
-  [K in keyof TCollections & string]: CollectionAccessor<TCollections[K]['schema']>
+  [K in keyof TCollections & string]: CollectionAccessor<InferVersionedOutput<TCollections[K]>>
 }
 
 /**
@@ -129,7 +134,7 @@ export function createClient<TCollections extends CollectionsConfig>(
   const client = {} as PlasticineClient<TCollections>
 
   for (const name of collections) {
-    const accessor: CollectionAccessor<TCollections[typeof name]['schema']> = {
+    const accessor: CollectionAccessor<unknown> = {
       async list() {
         return fetcher.listItems(name)
       },
@@ -156,7 +161,7 @@ export function createClient<TCollections extends CollectionsConfig>(
       },
     }
 
-    ;(client as Record<string, typeof accessor>)[name] = accessor
+    ;(client as Record<string, CollectionAccessor<unknown>>)[name] = accessor
   }
 
   return client
