@@ -30,10 +30,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Build main app
+      - name: Build demo
         working-directory: demo/demo1
         run: pnpm build
-
-      - name: Build admin
-        working-directory: demo/demo1
-        run: pnpm build:admin

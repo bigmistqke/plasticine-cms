@@ -1,6 +1,6 @@
 import { createGitHubClient, Infer } from '@plasticine/core'
 import { createResource, For, Show, Suspense } from 'solid-js'
-import config from '../plasticine/config'
+import config from '../config'
 import './App.css'
 
 // Types inferred from the schema

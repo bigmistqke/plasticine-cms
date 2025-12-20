@@ -11,9 +11,7 @@
     "start": "vite",
     "dev": "vite",
     "build": "vite build",
-    "build:admin": "vite build --config plasticine/vite.config.ts",
     "serve": "vite preview",
-    "admin": "vite --config plasticine/vite.config.ts",
     "migrate": "plasticine migrate",
     "migrate:dry": "plasticine migrate --dry-run",
     "typecheck": "tsc --noEmit"
@@ -27,6 +25,7 @@
   },
   "dependencies": {
     "@plasticine/core": "workspace:*",
+    "@solidjs/router": "^0.15.4",
     "solid-js": "^1.9.5",
     "valibot": "^1.2.0"
   }
