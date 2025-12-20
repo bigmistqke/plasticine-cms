@@ -26,7 +26,7 @@ if (import.meta.env.DEV && !(root instanceof HTMLElement)) {
 
 render(
   () => (
-    <Router>
+    <Router base="plasticine-cms">
       <Route path="/*" component={App} />
       <Route
         path="/admin/*"
