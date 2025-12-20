@@ -1,5 +1,5 @@
 import { Route, Router, useNavigate, useSearchParams } from '@solidjs/router'
-import { Show } from 'solid-js'
+import { Match, Show, Switch } from 'solid-js'
 import type { AuthProvider } from '../auth/types'
 import { type BackendFactory } from '../backend/types'
 import type { CollectionsConfig, PlasticineConfig } from '../config/define-config'
@@ -41,38 +41,34 @@ function Welcome() {
 function CMSContent(props: { config: PlasticineConfig<any> }) {
   const [searchParams] = useSearchParams<CMSParams>()
 
-  const schema = () =>
-    searchParams.collection ? props.config.getSchema(searchParams.collection) : null
-
   return (
-    <Show
-      when={searchParams.view === 'media'}
-      fallback={
-        <Show
-          when={searchParams.view === 'schema'}
-          fallback={
-            <Show when={searchParams.collection} fallback={<Welcome />}>
+    <Switch fallback={<Welcome />}>
+      <Match when={searchParams.view === 'media'}>
+        <MediaLibrary />
+      </Match>
+      <Match when={searchParams.view === 'schema'}>
+        <SchemaEditor />
+      </Match>
+      <Match when={searchParams.collection}>
+        {collection => (
+          <Show
+            when={searchParams.item}
+            fallback={<ItemList collectionKey={searchParams.collection!} />}
+          >
+            {item => (
               <Show
-                when={searchParams.item}
-                fallback={<ItemList collectionKey={searchParams.collection!} />}
+                when={props.config.getSchema(collection())}
+                fallback={<div>Collection not found</div>}
               >
-                <Show when={schema()} fallback={<div>Collection not found</div>}>
-                  <Editor
-                    schema={schema()!}
-                    collectionKey={searchParams.collection!}
-                    itemId={searchParams.item!}
-                  />
-                </Show>
+                {schema => (
+                  <Editor schema={schema()} collectionKey={collection()} itemId={item()} />
+                )}
               </Show>
-            </Show>
-          }
-        >
-          <SchemaEditor />
-        </Show>
-      }
-    >
-      <MediaLibrary />
-    </Show>
+            )}
+          </Show>
+        )}
+      </Match>
+    </Switch>
   )
 }
 

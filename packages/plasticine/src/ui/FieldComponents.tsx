@@ -1,5 +1,5 @@
 import { Field, FieldArray, insert, remove } from '@formisch/solid'
-import { createSignal, For, Show, type Component } from 'solid-js'
+import { createSignal, For, Match, Show, Switch, type Component } from 'solid-js'
 import { Dynamic, Index } from 'solid-js/web'
 import type * as v from 'valibot'
 import type { FieldMetadata, FieldUIType } from '../config/fields'
@@ -22,6 +22,23 @@ export interface DynamicFieldProps {
   path: any
   schema: v.GenericSchema
   label?: string
+}
+
+// Object Field Component (for nested objects)
+export interface ObjectFieldProps {
+  form: any
+  path: readonly [string, ...(string | number)[]]
+  entries: Record<string, v.GenericSchema>
+  label: string
+}
+
+// Array Field Component
+export interface ArrayFieldProps {
+  form: any
+  path: readonly [string, ...(string | number)[]]
+  itemSchema: v.GenericSchema
+  label: string
+  metadata: Partial<FieldMetadata>
 }
 
 /**********************************************************************************/
@@ -87,6 +104,35 @@ function getFieldLabel(
     .replace(/([A-Z])/g, ' $1')
     .replace(/^./, s => s.toUpperCase())
     .trim()
+}
+
+/**
+ * Get default value for a schema type
+ */
+function getDefaultValue(schema: v.GenericSchema): unknown {
+  if (!('type' in schema)) return undefined
+
+  switch (schema.type) {
+    case 'string':
+      return ''
+    case 'number':
+      return 0
+    case 'boolean':
+      return false
+    case 'array':
+      return []
+    case 'object':
+      // For objects, create default values for each entry
+      if ('entries' in schema && typeof schema.entries === 'object') {
+        const entries = schema.entries as Record<string, v.GenericSchema>
+        return Object.fromEntries(
+          Object.entries(entries).map(([key, fieldSchema]) => [key, getDefaultValue(fieldSchema)]),
+        )
+      }
+      return {}
+    default:
+      return undefined
+  }
 }
 
 /**********************************************************************************/
@@ -299,67 +345,13 @@ export const fieldComponents: Record<FieldUIType, Component<FieldComponentProps>
   reference: ReferenceField,
 }
 
-/**
- * Dynamic field component that renders the appropriate input based on schema
- */
-export function DynamicField(props: DynamicFieldProps) {
-  const uiType = () => getFieldUIType(props.schema)
-  const label = () => props.label || getFieldLabel(props.schema, props.path)
-  const metadata = () => getSchemaMetadata(props.schema) as Partial<FieldMetadata>
+/**********************************************************************************/
+/*                                                                                */
+/*                                  Dynamic Field                                 */
+/*                                                                                */
+/**********************************************************************************/
 
-  // Handle array schemas
-  if (isArraySchema(props.schema)) {
-    return (
-      <ArrayField
-        form={props.form}
-        path={props.path}
-        itemSchema={(props.schema as { item: v.GenericSchema }).item}
-        label={label()}
-        metadata={metadata()}
-      />
-    )
-  }
-
-  // Handle nested object schemas
-  if (isObjectSchema(props.schema)) {
-    return (
-      <ObjectField
-        form={props.form}
-        path={props.path}
-        entries={(props.schema as { entries: Record<string, v.GenericSchema> }).entries}
-        label={label()}
-      />
-    )
-  }
-
-  return (
-    <Field of={props.form} path={props.path}>
-      {field => (
-        <div class="field">
-          <label class="field-label">{label()}</label>
-          <Dynamic
-            component={fieldComponents[uiType()]}
-            field={field as FieldState}
-            metadata={metadata()}
-          />
-          <Show when={field.errors?.[0]}>
-            <span class="field-error">{field.errors![0]}</span>
-          </Show>
-        </div>
-      )}
-    </Field>
-  )
-}
-
-// Object Field Component (for nested objects)
-interface ObjectFieldProps {
-  form: any
-  path: readonly [string, ...(string | number)[]]
-  entries: Record<string, v.GenericSchema>
-  label: string
-}
-
-function ObjectField(props: ObjectFieldProps) {
+export function ObjectField(props: ObjectFieldProps) {
   return (
     <div class="field object-field">
       <label class="field-label">{props.label}</label>
@@ -372,15 +364,6 @@ function ObjectField(props: ObjectFieldProps) {
       </div>
     </div>
   )
-}
-
-// Array Field Component
-export interface ArrayFieldProps {
-  form: any
-  path: readonly [string, ...(string | number)[]]
-  itemSchema: v.GenericSchema
-  label: string
-  metadata: Partial<FieldMetadata>
 }
 
 export function ArrayField(props: ArrayFieldProps) {
@@ -443,30 +426,50 @@ export function ArrayField(props: ArrayFieldProps) {
 }
 
 /**
- * Get default value for a schema type
+ * Dynamic field component that renders the appropriate input based on schema
  */
-function getDefaultValue(schema: v.GenericSchema): unknown {
-  if (!('type' in schema)) return undefined
+export function DynamicField(props: DynamicFieldProps) {
+  const uiType = () => getFieldUIType(props.schema)
+  const label = () => props.label || getFieldLabel(props.schema, props.path)
+  const metadata = () => getSchemaMetadata(props.schema) as Partial<FieldMetadata>
 
-  switch (schema.type) {
-    case 'string':
-      return ''
-    case 'number':
-      return 0
-    case 'boolean':
-      return false
-    case 'array':
-      return []
-    case 'object':
-      // For objects, create default values for each entry
-      if ('entries' in schema && typeof schema.entries === 'object') {
-        const entries = schema.entries as Record<string, v.GenericSchema>
-        return Object.fromEntries(
-          Object.entries(entries).map(([key, fieldSchema]) => [key, getDefaultValue(fieldSchema)]),
-        )
+  return (
+    <Switch
+      fallback={
+        <Field of={props.form} path={props.path}>
+          {field => (
+            <div class="field">
+              <label class="field-label">{label()}</label>
+              <Dynamic
+                component={fieldComponents[uiType()]}
+                field={field as FieldState}
+                metadata={metadata()}
+              />
+              <Show when={field.errors?.[0]}>
+                <span class="field-error">{field.errors![0]}</span>
+              </Show>
+            </div>
+          )}
+        </Field>
       }
-      return {}
-    default:
-      return undefined
-  }
+    >
+      <Match when={isArraySchema(props.schema)}>
+        <ArrayField
+          form={props.form}
+          path={props.path}
+          itemSchema={(props.schema as { item: v.GenericSchema }).item}
+          label={label()}
+          metadata={metadata()}
+        />
+      </Match>
+      <Match when={isObjectSchema(props.schema)}>
+        <ObjectField
+          form={props.form}
+          path={props.path}
+          entries={(props.schema as { entries: Record<string, v.GenericSchema> }).entries}
+          label={label()}
+        />
+      </Match>
+    </Switch>
+  )
 }

@@ -4,7 +4,7 @@ import '@plasticine/core/styles.css'
 import { Route, Router } from '@solidjs/router'
 import 'solid-devtools'
 import { render } from 'solid-js/web'
-import config from '../config'
+import config from '../plasticine.config'
 import App from './App'
 
 const backend = createGithubBackend({

@@ -94,7 +94,7 @@ const posts = await content.posts.getAll()
 const post = await content.posts.get('hello-world')
 
 // Type helper for components
-type Post = Infer<typeof config, 'posts'>
+type Post = Infer<typeof config.collections.post>
 ```
 
 ## Architecture
