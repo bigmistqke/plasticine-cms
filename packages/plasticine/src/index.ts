@@ -22,7 +22,6 @@ export * from './ui/Editor'
 export * from './ui/FieldComponents'
 export * from './ui/ItemList'
 export * from './ui/MediaLibrary'
-export * from './ui/SchemaEditor'
 export * from './ui/SchemaForm'
 export * from './ui/store'
 

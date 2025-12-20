@@ -8,7 +8,6 @@ import { Editor } from './Editor'
 import { ItemList } from './ItemList'
 import { Link } from './Link'
 import { MediaLibrary } from './MediaLibrary'
-import { SchemaEditor } from './SchemaEditor'
 
 interface CMSProps<T extends CollectionsConfig = CollectionsConfig> {
   config: PlasticineConfig<T>
@@ -45,9 +44,6 @@ function CMSContent(props: { config: PlasticineConfig<any> }) {
     <Switch fallback={<Welcome />}>
       <Match when={searchParams.view === 'media'}>
         <MediaLibrary />
-      </Match>
-      <Match when={searchParams.view === 'schema'}>
-        <SchemaEditor />
       </Match>
       <Match when={searchParams.collection}>
         {collection => (
