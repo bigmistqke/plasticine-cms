@@ -1,36 +1,199 @@
-## Usage
+# Plasticine
 
-Those templates dependencies are maintained via [pnpm](https://pnpm.io) via `pnpm up -Lri`.
+A git-based headless CMS for SolidJS with type-safe content management.
 
-This is the reason you see a `pnpm-lock.yaml`. That being said, any package manager will work. This file can be safely be removed once you clone a template.
+## Features
+
+- **Git-based storage** - Content stored as JSON files in your repository
+- **Type-safe schemas** - Define content types with Valibot schemas
+- **Schema versioning** - Automatic migrations when schemas change
+- **Media management** - Upload and manage images/files
+- **Type-safe client** - Fully typed frontend API with IntelliSense
+- **Embeddable** - Drop into existing SolidJS apps with @solidjs/router
+
+## Installation
 
 ```bash
-$ npm install # or pnpm install or yarn install
+pnpm add @plasticine/core
 ```
 
-### Learn more on the [Solid Website](https://solidjs.com) and come chat with us on our [Discord](https://discord.com/invite/solidjs)
+## Quick Start
 
-## Available Scripts
+### 1. Define your schema
 
-In the project directory, you can run:
+```ts
+// config.ts
+import { defineConfig, fields } from '@plasticine/core'
+import * as v from 'valibot'
 
-### `npm run dev` or `npm start`
+export default defineConfig({
+  collections: {
+    posts: v.object({
+      slug: fields.slug(),
+      title: fields.text({ label: 'Title' }),
+      content: fields.textarea({ label: 'Content' }),
+      cover: fields.image({ label: 'Cover Image' }),
+      published: fields.boolean({ label: 'Published' }),
+    }),
+    authors: v.object({
+      slug: fields.slug(),
+      name: fields.text({ label: 'Name' }),
+      avatar: fields.image({ label: 'Avatar' }),
+    }),
+  },
+})
+```
 
-Runs the app in the development mode.<br>
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+### 2. Add the CMS to your app
 
-The page will reload if you make edits.<br>
+```tsx
+// index.tsx
+import { CMS, createGithubAuth, createGithubBackend } from '@plasticine/core'
+import '@plasticine/core/styles.css'
+import { Route, Router } from '@solidjs/router'
+import config from './config'
 
-### `npm run build`
+const backend = createGithubBackend({
+  owner: 'your-username',
+  repo: 'your-repo',
+  branch: 'main',
+  contentPath: 'content',
+})
 
-Builds the app for production to the `dist` folder.<br>
-It correctly bundles Solid in production mode and optimizes the build for the best performance.
+const auth = createGithubAuth()
 
-The build is minified and the filenames include the hashes.<br>
-Your app is ready to be deployed!
+render(
+  () => (
+    <Router>
+      <Route path="/*" component={App} />
+      <Route
+        path="/admin/*"
+        component={() => (
+          <CMS
+            config={config}
+            backend={backend}
+            auth={auth}
+            schemaPath="config.ts"
+          />
+        )}
+      />
+    </Router>
+  ),
+  document.getElementById('root')!,
+)
+```
 
-## Deployment
+### 3. Fetch content in your frontend
 
-You can deploy the `dist` folder to any static host provider (netlify, surge, now, etc.)
+```ts
+import { createGitHubClient, Infer } from '@plasticine/core'
+import config from './config'
 
-## This project was created with the [Solid CLI](https://github.com/solidjs-community/solid-cli)
+const content = createGitHubClient(config, {
+  owner: 'your-username',
+  repo: 'your-repo',
+})
+
+// Fully typed!
+const posts = await content.posts.getAll()
+const post = await content.posts.get('hello-world')
+
+// Type helper for components
+type Post = Infer<typeof config, 'posts'>
+```
+
+## Architecture
+
+```
+@plasticine/core
+├── config/      # Schema definition & versioning
+├── auth/        # Authentication providers
+├── backend/     # Storage backends (GitHub, etc.)
+├── client/      # Frontend content fetching
+└── ui/          # CMS admin interface
+```
+
+### Auth Providers
+
+Each auth provider handles login UI and token persistence:
+
+```ts
+import { createGithubAuth } from '@plasticine/core'
+
+const auth = createGithubAuth()
+// Provides: checkAuth(), logout(), LoginScreen component
+```
+
+### Backends
+
+Backends handle CRUD operations for content, media, and config:
+
+```ts
+import { createGithubBackend } from '@plasticine/core'
+
+const backend = createGithubBackend({
+  owner: 'user',
+  repo: 'repo',
+  branch: 'main',
+  contentPath: 'content',
+})
+```
+
+## Field Types
+
+```ts
+import { fields } from '@plasticine/core'
+
+fields.text({ label: 'Title' })
+fields.textarea({ label: 'Description' })
+fields.number({ label: 'Count' })
+fields.boolean({ label: 'Published' })
+fields.slug()  // Auto-validates slug format
+fields.image({ label: 'Cover' })
+fields.file({ label: 'Attachment' })
+```
+
+## Schema Versioning
+
+Schemas support versioning with automatic migrations:
+
+```ts
+import { defineConfig, versioned } from '@plasticine/core'
+
+export default defineConfig({
+  collections: {
+    posts: versioned(
+      // Previous versions
+      [
+        v.object({ title: v.string() }), // v0
+        v.object({ title: v.string(), slug: v.string() }), // v1
+      ],
+      // Current schema
+      v.object({
+        title: v.string(),
+        slug: v.string(),
+        published: v.boolean(),
+      }),
+      // Migrations
+      [
+        (data) => ({ ...data, slug: slugify(data.title) }), // v0 -> v1
+        (data) => ({ ...data, published: false }), // v1 -> v2
+      ]
+    ),
+  },
+})
+```
+
+## CLI
+
+```bash
+# Dry-run migrations
+pnpm plasticine migrate --dry-run
+
+# Apply migrations
+pnpm plasticine migrate
+```
+
+## License
+
+MIT
