@@ -1,10 +1,10 @@
-import { A, Route, Router, useParams } from '@solidjs/router'
-import { Show, type JSX } from 'solid-js'
+import { Route, Router, useNavigate, useSearchParams } from '@solidjs/router'
+import { Show } from 'solid-js'
 import { type BackendFactory } from './backend/types'
 import { Auth } from './components/Auth'
-import { CollectionList } from './components/CollectionList'
 import { Editor } from './components/Editor'
 import { ItemList } from './components/ItemList'
+import { Link } from './components/Link'
 import { MediaLibrary } from './components/MediaLibrary'
 import { SchemaEditor } from './components/SchemaEditor'
 import type { CollectionsConfig, PlasticineConfig } from './config/define-config'
@@ -14,7 +14,14 @@ interface CMSProps<T extends CollectionsConfig = CollectionsConfig> {
   config: PlasticineConfig<T>
   backend: BackendFactory
   schemaPath?: string
-  basePath?: string
+  /** Set to true when CMS is rendered inside an existing Router */
+  embedded?: boolean
+}
+
+export type CMSParams = {
+  view?: string
+  collection?: string
+  item?: string
 }
 
 /**
@@ -30,40 +37,102 @@ function Welcome() {
 }
 
 /**
- * Route component for editing an item
+ * Main content router based on search params
  */
-function EditorRoute(props: { config: PlasticineConfig<any> }) {
-  const params = useParams<{ collection: string; item: string }>()
-  const schema = () => props.config.getSchema(params.collection)
+function CMSContent(props: { config: PlasticineConfig<any> }) {
+  const [searchParams] = useSearchParams<CMSParams>()
+
+  const schema = () =>
+    searchParams.collection ? props.config.getSchema(searchParams.collection) : null
 
   return (
-    <Show when={schema()} fallback={<div>Collection not found</div>}>
-      <Editor schema={schema()!} collectionKey={params.collection} itemId={params.item} />
+    <Show
+      when={searchParams.view === 'media'}
+      fallback={
+        <Show
+          when={searchParams.view === 'schema'}
+          fallback={
+            <Show when={searchParams.collection} fallback={<Welcome />}>
+              <Show
+                when={searchParams.item}
+                fallback={<ItemList collectionKey={searchParams.collection!} />}
+              >
+                <Show when={schema()} fallback={<div>Collection not found</div>}>
+                  <Editor
+                    schema={schema()!}
+                    collectionKey={searchParams.collection!}
+                    itemId={searchParams.item!}
+                  />
+                </Show>
+              </Show>
+            </Show>
+          }
+        >
+          <SchemaEditor />
+        </Show>
+      }
+    >
+      <MediaLibrary />
     </Show>
   )
 }
 
 /**
- * Route component for item list
+ * Sidebar collection list using search param navigation
  */
-function ItemListRoute() {
-  const params = useParams<{ collection: string }>()
-  return <ItemList collectionKey={params.collection} />
+function CMSSidebar(props: { config: PlasticineConfig<any> }) {
+  const [state] = useCMS()
+
+  const displayName = (name: string) => name.charAt(0).toUpperCase() + name.slice(1)
+
+  return (
+    <aside class="cms-sidebar">
+      <nav class="collection-list">
+        <h2 class="collection-list-title">Collections</h2>
+        <ul class="collection-list-items">
+          {props.config.getCollections().map(name => (
+            <Link params={{ collection: name }} class="collection-list-item" activeClass="active">
+              <span class="collection-name">{displayName(name)}</span>
+              <span class="collection-count">{state.collections[name]?.items.length || 0}</span>
+            </Link>
+          ))}
+        </ul>
+      </nav>
+
+      <nav class="media-nav">
+        <h2 class="media-nav-title">Media</h2>
+        <ul class="media-nav-items">
+          <Link params={{ view: 'media' }} class="media-nav-item" activeClass="active">
+            <span class="media-nav-name">Library</span>
+            <span class="media-nav-count">{state.media.files.length}</span>
+          </Link>
+        </ul>
+      </nav>
+
+      <nav class="schema-nav">
+        <h2 class="schema-nav-title">Settings</h2>
+        <ul class="schema-nav-items">
+          <Link params={{ view: 'schema' }} class="schema-nav-item" activeClass="active">
+            <span class="schema-nav-name">Schema</span>
+          </Link>
+        </ul>
+      </nav>
+    </aside>
+  )
 }
 
 /**
- * Main CMS layout component - wraps route content
+ * Main CMS layout component
  */
-function CMSLayout(props: { config: PlasticineConfig<any>; children?: JSX.Element }) {
+function CMSLayout(props: { config: PlasticineConfig<any> }) {
   const [state, actions] = useCMS()
 
   return (
     <div class="cms-layout">
-      {/* Header */}
       <header class="cms-header">
-        <A href="/" class="cms-logo">
+        <Link params={{}} class="cms-logo">
           Plasticine
-        </A>
+        </Link>
         <Show when={state.user}>
           <div class="cms-user">
             <img src={state.user!.avatar_url} alt={state.user!.login} class="cms-avatar" />
@@ -76,34 +145,10 @@ function CMSLayout(props: { config: PlasticineConfig<any>; children?: JSX.Elemen
       </header>
 
       <div class="cms-body">
-        {/* Sidebar */}
-        <aside class="cms-sidebar">
-          <CollectionList collections={props.config.getCollections()} />
-
-          {/* Media section */}
-          <nav class="media-nav">
-            <h2 class="media-nav-title">Media</h2>
-            <ul class="media-nav-items">
-              <A href="/media" class="media-nav-item" activeClass="active">
-                <span class="media-nav-name">Library</span>
-                <span class="media-nav-count">{state.media.files.length}</span>
-              </A>
-            </ul>
-          </nav>
-
-          {/* Schema section */}
-          <nav class="schema-nav">
-            <h2 class="schema-nav-title">Settings</h2>
-            <ul class="schema-nav-items">
-              <A href="/schema" class="schema-nav-item" activeClass="active">
-                <span class="schema-nav-name">Schema</span>
-              </A>
-            </ul>
-          </nav>
-        </aside>
-
-        {/* Main content - renders nested routes */}
-        <main class="cms-main">{props.children}</main>
+        <CMSSidebar config={props.config} />
+        <main class="cms-main">
+          <CMSContent config={props.config} />
+        </main>
       </div>
     </div>
   )
@@ -112,7 +157,7 @@ function CMSLayout(props: { config: PlasticineConfig<any>; children?: JSX.Elemen
 /**
  * Auth gate wrapper component
  */
-function AuthGate(props: { config: PlasticineConfig<any>; children: any }) {
+function AuthGate(props: { config: PlasticineConfig<any> }) {
   const [state] = useCMS()
 
   return (
@@ -128,33 +173,35 @@ function AuthGate(props: { config: PlasticineConfig<any>; children: any }) {
           </div>
         }
       >
-        <CMSLayout config={props.config}>{props.children}</CMSLayout>
+        <CMSLayout config={props.config} />
       </Show>
     </Show>
   )
 }
 
 /**
- * Full CMS application with auth gate
+ * Inner CMS content
+ */
+function CMSInner<T extends CollectionsConfig>(props: CMSProps<T>) {
+  return (
+    <CMSProvider config={props.config} backend={props.backend} schemaPath={props.schemaPath}>
+      <AuthGate config={props.config} />
+    </CMSProvider>
+  )
+}
+
+/**
+ * CMS component - automatically wraps with Router if needed
  */
 export function CMS<T extends CollectionsConfig>(props: CMSProps<T>) {
-  return (
-    <Router
-      base={props.basePath}
-      root={routeProps => (
-        <CMSProvider config={props.config} backend={props.backend} schemaPath={props.schemaPath}>
-          <AuthGate config={props.config}>{routeProps.children}</AuthGate>
-        </CMSProvider>
-      )}
-    >
-      <Route path="/" component={Welcome} />
-      <Route path="/schema" component={SchemaEditor} />
-      <Route path="/media" component={MediaLibrary} />
-      <Route
-        path="/collections/:collection/:item"
-        component={() => <EditorRoute config={props.config} />}
-      />
-      <Route path="/collections/:collection" component={ItemListRoute} />
-    </Router>
-  )
+  try {
+    useNavigate()
+    return <CMSInner {...props} />
+  } catch {
+    return (
+      <Router>
+        <Route path="*" component={() => <CMSInner {...props} />} />
+      </Router>
+    )
+  }
 }

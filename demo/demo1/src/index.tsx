@@ -32,7 +32,6 @@ render(
           <CMS
             config={config}
             backend={backend}
-            basePath="/admin"
             schemaPath={import.meta.env.VITE_SCHEMA_PATH || 'demo/demo1/config.ts'}
           />
         )}

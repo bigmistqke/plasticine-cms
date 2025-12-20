@@ -1,6 +1,6 @@
-import { A } from '@solidjs/router'
 import { For } from 'solid-js'
 import { useCMS } from '../context'
+import { Link } from './Link'
 
 interface CollectionListProps {
   collections: string[]
@@ -22,10 +22,10 @@ export function CollectionList(props: CollectionListProps) {
       <ul class="collection-list-items">
         <For each={props.collections}>
           {name => (
-            <A href={`/collections/${name}`} class="collection-list-item" activeClass="active">
+            <Link params={{ collection: name }} class="collection-list-item" activeClass="active">
               <span class="collection-name">{displayName(name)}</span>
               <span class="collection-count">{state.collections[name]?.items.length || 0}</span>
-            </A>
+            </Link>
           )}
         </For>
       </ul>

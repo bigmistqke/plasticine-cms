@@ -1,7 +1,8 @@
-import { A, useAction, useSubmission } from '@solidjs/router'
+import { useAction, useSubmission } from '@solidjs/router'
 import { For, Show } from 'solid-js'
 import { deleteItemAction } from '../actions'
 import { useCMS } from '../context'
+import { Link } from './Link'
 
 interface ItemListProps {
   collectionKey: string
@@ -43,9 +44,9 @@ export function ItemList(props: ItemListProps) {
     <div class="item-list">
       <div class="item-list-header">
         <h2 class="item-list-title">{displayName()}</h2>
-        <A href={`/collections/${props.collectionKey}/__new__`} class="btn btn-primary">
+        <Link params={{ collection: props.collectionKey, item: '__new__' }} class="btn btn-primary">
           + New
-        </A>
+        </Link>
       </div>
 
       <Show when={collectionState()?.loading}>
@@ -64,14 +65,14 @@ export function ItemList(props: ItemListProps) {
         <For each={items()}>
           {item => (
             <li class="item-list-item">
-              <A
-                href={`/collections/${props.collectionKey}/${item.id}`}
+              <Link
+                params={{ collection: props.collectionKey, item: item.id }}
                 class="item-info"
                 activeClass="active"
               >
                 <span class="item-title">{getItemTitle(item.data)}</span>
                 <span class="item-id">{item.id}</span>
-              </A>
+              </Link>
               <button
                 class="btn btn-danger btn-small"
                 onClick={e => {
