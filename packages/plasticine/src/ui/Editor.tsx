@@ -1,6 +1,7 @@
-import { useAction, useNavigate, useSubmission } from '@solidjs/router'
+import { useAction, useSearchParams, useSubmission } from '@solidjs/router'
 import { Show } from 'solid-js'
 import type * as v from 'valibot'
+import { CMSParams } from './CMS'
 import { type ContentItem } from '../backend/types'
 import { saveItemAction } from './actions'
 import { useCMS } from './context'
@@ -17,7 +18,7 @@ interface EditorProps {
  */
 export function Editor(props: EditorProps) {
   const [state, actions] = useCMS()
-  const navigate = useNavigate()
+  const [, setSearchParams] = useSearchParams<CMSParams>()
 
   const saveItem = useAction(saveItemAction)
   const submission = useSubmission(saveItemAction)
@@ -41,18 +42,15 @@ export function Editor(props: EditorProps) {
 
     // If was new, navigate to the created item
     if (isNew()) {
-      // Use slug or id field for the filename
       const id = (data.slug ?? data.id) as string
       if (id) {
-        navigate(`/collections/${props.collectionKey}/${id}`, {
-          replace: true,
-        })
+        setSearchParams({ item: id }, { replace: true })
       }
     }
   }
 
   const handleCancel = () => {
-    navigate(`/collections/${props.collectionKey}`)
+    setSearchParams({ item: null } as any)
   }
 
   return (
