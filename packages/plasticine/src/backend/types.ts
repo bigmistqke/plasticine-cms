@@ -5,11 +5,10 @@
  */
 
 /**
- * Backend factory interface - created by github(), mongodb(), etc.
+ * Backend factory interface - created by createGithubBackend(), etc.
  */
 export interface BackendFactory {
-  createBackend(token: string): Backend
-  getUser(token: string): Promise<{ login: string; avatar_url: string; name: string }>
+  createBackend(token?: string): Backend
 }
 
 export interface ContentItem {

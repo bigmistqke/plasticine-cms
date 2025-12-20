@@ -1,5 +1,5 @@
 import { createStore, produce } from 'solid-js/store'
-import { tokenStorage } from '../backend/github'
+import type { AuthProvider, AuthResult } from '../auth/types'
 import type { Backend, BackendFactory, ContentItem, MediaFile } from '../backend/types'
 import type { PlasticineConfig } from '../config/define-config'
 import { getSchemaEntries, getSchemaMetadata } from '../config/schema'
@@ -7,6 +7,7 @@ import { getSchemaEntries, getSchemaMetadata } from '../config/schema'
 export interface CMSProps {
   config: PlasticineConfig<any>
   backend: BackendFactory
+  auth: AuthProvider
   schemaPath?: string
 }
 export interface CollectionState {
@@ -57,8 +58,8 @@ export interface CMSState {
 
 export interface CMSActions {
   // Auth
-  loginWithToken(token: string): Promise<void>
-  logout(): void
+  handleAuthSuccess(result: AuthResult): Promise<void>
+  logout(): Promise<void>
 
   // Data
   loadAllData(): Promise<void>
@@ -93,8 +94,9 @@ export type CMSStore = [CMSState, CMSActions]
 /**********************************************************************************/
 
 export function createCMSStore(props: CMSProps): CMSStore {
-  const { config, backend: backendFactory, schemaPath = 'plasticine/config.ts' } = props
+  const { config, backend: backendFactory, auth, schemaPath = 'plasticine/config.ts' } = props
   let backend: Backend | null = null
+  let currentToken: string | undefined = undefined
 
   const collectionNames = config.getCollections()
 
@@ -173,39 +175,26 @@ export function createCMSStore(props: CMSProps): CMSStore {
   }
 
   const actions: CMSActions = {
-    async loginWithToken(token: string) {
-      setState('authLoading', true)
-      setState('authError', null)
+    async handleAuthSuccess(result: AuthResult) {
+      currentToken = result.token
+      backend = backendFactory.createBackend(currentToken)
 
-      try {
-        const user = await backendFactory.getUser(token)
-        backend = backendFactory.createBackend(token)
+      setState(
+        produce(s => {
+          s.authenticated = true
+          s.user = result.user
+          s.authLoading = false
+        }),
+      )
 
-        tokenStorage.set(token)
-        setState(
-          produce(s => {
-            s.authenticated = true
-            s.user = user
-            s.authLoading = false
-          }),
-        )
-
-        // Load all data after authentication
-        await actions.loadAllData()
-      } catch (error) {
-        setState(
-          produce(s => {
-            s.authLoading = false
-            s.authError = error instanceof Error ? error.message : 'Authentication failed'
-          }),
-        )
-        throw error
-      }
+      // Load all data after authentication
+      await actions.loadAllData()
     },
 
-    logout() {
-      tokenStorage.remove()
+    async logout() {
+      await auth.logout()
       backend = null
+      currentToken = undefined
       setState(
         produce(s => {
           s.authenticated = false
@@ -470,12 +459,11 @@ export function createCMSStore(props: CMSProps): CMSStore {
   }
 
   // Try to restore session on init
-  const savedToken = tokenStorage.get()
-  if (savedToken) {
-    actions.loginWithToken(savedToken).catch(() => {
-      tokenStorage.remove()
-    })
-  }
+  auth.checkAuth().then(result => {
+    if (result) {
+      actions.handleAuthSuccess(result)
+    }
+  })
 
   return [state, actions]
 }

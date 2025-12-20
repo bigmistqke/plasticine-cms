@@ -1,4 +1,5 @@
 import { createContext, useContext, type JSX } from 'solid-js'
+import type { AuthProvider } from '../auth/types'
 import { BackendFactory } from '../backend/types'
 import type { PlasticineConfig } from '../config/define-config'
 import { CMSStore, createCMSStore } from './store'
@@ -11,12 +12,14 @@ const CMSContext = createContext<CMSStore>()
 export function CMSProvider(props: {
   config: PlasticineConfig<any>
   backend: BackendFactory
+  auth: AuthProvider
   schemaPath?: string
   children: JSX.Element
 }) {
   const store = createCMSStore({
     config: props.config,
     backend: props.backend,
+    auth: props.auth,
     schemaPath: props.schemaPath,
   })
 

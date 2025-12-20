@@ -1,8 +1,8 @@
 import { Route, Router, useNavigate, useSearchParams } from '@solidjs/router'
 import { Show } from 'solid-js'
+import type { AuthProvider } from '../auth/types'
 import { type BackendFactory } from '../backend/types'
 import type { CollectionsConfig, PlasticineConfig } from '../config/define-config'
-import { Auth } from './Auth'
 import { CMSProvider, useCMS } from './context'
 import { Editor } from './Editor'
 import { ItemList } from './ItemList'
@@ -13,9 +13,8 @@ import { SchemaEditor } from './SchemaEditor'
 interface CMSProps<T extends CollectionsConfig = CollectionsConfig> {
   config: PlasticineConfig<T>
   backend: BackendFactory
+  auth: AuthProvider
   schemaPath?: string
-  /** Set to true when CMS is rendered inside an existing Router */
-  embedded?: boolean
 }
 
 export type CMSParams = {
@@ -157,11 +156,14 @@ function CMSLayout(props: { config: PlasticineConfig<any> }) {
 /**
  * Auth gate wrapper component
  */
-function AuthGate(props: { config: PlasticineConfig<any> }) {
-  const [state] = useCMS()
+function AuthGate(props: { config: PlasticineConfig<any>; auth: AuthProvider }) {
+  const [state, actions] = useCMS()
 
   return (
-    <Show when={state.authenticated} fallback={<Auth />}>
+    <Show
+      when={state.authenticated}
+      fallback={<props.auth.LoginScreen onSuccess={actions.handleAuthSuccess} />}
+    >
       <Show
         when={!state.dataLoading}
         fallback={
@@ -184,8 +186,13 @@ function AuthGate(props: { config: PlasticineConfig<any> }) {
  */
 function CMSInner<T extends CollectionsConfig>(props: CMSProps<T>) {
   return (
-    <CMSProvider config={props.config} backend={props.backend} schemaPath={props.schemaPath}>
-      <AuthGate config={props.config} />
+    <CMSProvider
+      config={props.config}
+      backend={props.backend}
+      auth={props.auth}
+      schemaPath={props.schemaPath}
+    >
+      <AuthGate config={props.config} auth={props.auth} />
     </CMSProvider>
   )
 }

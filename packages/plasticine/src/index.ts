@@ -11,9 +11,11 @@ export * from './client/github'
 export * from './backend/github'
 export * from './backend/types'
 
+// Auth
+export * from './auth'
+
 // UI
 export * from './ui/actions'
-export * from './ui/Auth'
 export * from './ui/CMS'
 export * from './ui/CollectionList'
 export * from './ui/Editor'

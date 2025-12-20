@@ -1,30 +1,19 @@
-/**
- * GitHub API client with Device Flow OAuth
- */
+import type {
+  Backend,
+  ConfigBackend,
+  ContentBackend,
+  ContentItem,
+  MediaBackend,
+  MediaFile,
+} from './types'
 
 const GITHUB_API = 'https://api.github.com'
-const GITHUB_DEVICE_CODE_URL = 'https://github.com/login/device/code'
-const GITHUB_ACCESS_TOKEN_URL = 'https://github.com/login/oauth/access_token'
 
 export interface GitHubConfig {
   owner: string
   repo: string
   branch?: string
   contentPath?: string
-}
-
-export interface DeviceCodeResponse {
-  device_code: string
-  user_code: string
-  verification_uri: string
-  expires_in: number
-  interval: number
-}
-
-export interface TokenResponse {
-  access_token: string
-  token_type: string
-  scope: string
 }
 
 export interface GitHubFile {
@@ -41,83 +30,6 @@ export interface GitHubContent {
   encoding: string
   sha: string
   path: string
-}
-
-/**
- * Start Device Flow OAuth
- * Returns device code info for user to authenticate
- */
-export async function startDeviceFlow(clientId: string): Promise<DeviceCodeResponse> {
-  const response = await fetch(GITHUB_DEVICE_CODE_URL, {
-    method: 'POST',
-    headers: {
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      client_id: clientId,
-      scope: 'repo',
-    }),
-  })
-
-  if (!response.ok) {
-    throw new Error(`Failed to start device flow: ${response.statusText}`)
-  }
-
-  return response.json()
-}
-
-/**
- * Poll for access token after user authenticates
- */
-export async function pollForToken(
-  clientId: string,
-  deviceCode: string,
-  interval: number,
-  onPoll?: () => void,
-): Promise<TokenResponse> {
-  while (true) {
-    await new Promise(resolve => setTimeout(resolve, interval * 1000))
-    onPoll?.()
-
-    const response = await fetch(GITHUB_ACCESS_TOKEN_URL, {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        client_id: clientId,
-        device_code: deviceCode,
-        grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
-      }),
-    })
-
-    const data = await response.json()
-
-    if (data.access_token) {
-      return data as TokenResponse
-    }
-
-    if (data.error === 'authorization_pending') {
-      continue
-    }
-
-    if (data.error === 'slow_down') {
-      interval = data.interval || interval + 5
-      continue
-    }
-
-    if (data.error === 'expired_token') {
-      throw new Error('Device code expired. Please try again.')
-    }
-
-    if (data.error === 'access_denied') {
-      throw new Error('Access denied by user.')
-    }
-
-    throw new Error(`OAuth error: ${data.error}`)
-  }
 }
 
 /**
@@ -426,192 +338,149 @@ export class GitHubClient {
       await this.saveFile('', '.gitkeep', '', 'Initialize content directory')
     }
   }
-
-  /**
-   * Verify token and get user info
-   */
-  async getUser(): Promise<{ login: string; avatar_url: string; name: string }> {
-    const response = await fetch(`${GITHUB_API}/user`, {
-      headers: this.headers,
-    })
-
-    if (!response.ok) {
-      throw new Error('Invalid token or API error')
-    }
-
-    return response.json()
-  }
-}
-
-/**
- * Storage helpers for persisting auth
- */
-export const tokenStorage = {
-  key: 'plasticine_github_token',
-
-  get(): string | null {
-    return localStorage.getItem(this.key)
-  },
-
-  set(token: string): void {
-    localStorage.setItem(this.key, token)
-  },
-
-  remove(): void {
-    localStorage.removeItem(this.key)
-  },
 }
 
 /**
  * Create a GitHub backend for Plasticine.
  * Returns { content, media } that both use the same GitHubClient.
  */
-import type {
-  Backend,
-  ConfigBackend,
-  ContentBackend,
-  ContentItem,
-  MediaBackend,
-  MediaFile,
-} from './types'
 
 export interface GitHubBackendConfig extends GitHubConfig {
   token: string
-}
-
-export function createGitHubBackend(config: GitHubBackendConfig): Backend {
-  const client = new GitHubClient(config.token, config)
-  const branch = config.branch || 'main'
-  const contentPath = config.contentPath || 'content'
-
-  const content: ContentBackend = {
-    async listCollection(collection: string): Promise<ContentItem[]> {
-      const files = await client.listCollection(collection)
-      const items: ContentItem[] = []
-
-      for (const file of files) {
-        if (file.type === 'file' && file.name.endsWith('.json')) {
-          try {
-            const { data, sha } = await client.getJSON(collection, file.name)
-            items.push({
-              id: file.name.replace('.json', ''),
-              sha,
-              data: data as Record<string, unknown>,
-            })
-          } catch (e) {
-            console.error(`Failed to load ${file.name}:`, e)
-          }
-        }
-      }
-
-      return items
-    },
-
-    async getItem(collection: string, id: string): Promise<ContentItem> {
-      const { data, sha } = await client.getJSON(collection, `${id}.json`)
-      return { id, sha, data: data as Record<string, unknown> }
-    },
-
-    async saveItem(
-      collection: string,
-      id: string,
-      data: Record<string, unknown>,
-      sha?: string,
-    ): Promise<{ sha?: string }> {
-      const filename = `${id}.json`
-      const message = sha
-        ? `cms: Update ${collection}/${filename}`
-        : `cms: Create ${collection}/${filename}`
-      return client.saveJSON(collection, filename, data, message, sha)
-    },
-
-    async deleteItem(collection: string, id: string, sha?: string): Promise<void> {
-      const filename = `${id}.json`
-      const message = `cms: Delete ${collection}/${filename}`
-      await client.deleteFile(collection, filename, message, sha!)
-    },
-  }
-
-  const media: MediaBackend = {
-    async listMedia(): Promise<MediaFile[]> {
-      const uploadsPath = `${contentPath}/uploads`
-      const files = await client.listFolder(uploadsPath, true)
-
-      return files
-        .filter(f => f.type === 'file')
-        .map(f => ({
-          name: f.name,
-          path: f.path,
-          sha: f.sha,
-          size: f.size,
-          url: `https://raw.githubusercontent.com/${config.owner}/${config.repo}/${branch}/${f.path}`,
-        }))
-    },
-
-    async uploadFile(file: File, folder?: string): Promise<{ url: string; sha?: string }> {
-      const uploadPath = folder ? `uploads/${folder}` : 'uploads'
-      return client.uploadFile(file, uploadPath)
-    },
-
-    async deleteFile(path: string, sha?: string): Promise<void> {
-      await client.deleteFileByPath(path, `cms: Delete media ${path}`, sha!)
-    },
-  }
-
-  const configBackend: ConfigBackend = {
-    async readFile(path: string) {
-      const url = `https://api.github.com/repos/${config.owner}/${config.repo}/contents/${path}?ref=${branch}`
-      const response = await fetch(url, {
-        headers: {
-          Accept: 'application/vnd.github+json',
-          Authorization: `Bearer ${config.token}`,
-        },
-      })
-      if (!response.ok) {
-        throw new Error(`Failed to read file: ${response.statusText}`)
-      }
-      const data = await response.json()
-      return {
-        content: atob(data.content),
-        sha: data.sha,
-      }
-    },
-
-    async writeFile(path: string, content: string, sha?: string) {
-      const url = `https://api.github.com/repos/${config.owner}/${config.repo}/contents/${path}`
-      const response = await fetch(url, {
-        method: 'PUT',
-        headers: {
-          Accept: 'application/vnd.github+json',
-          Authorization: `Bearer ${config.token}`,
-        },
-        body: JSON.stringify({
-          message: `cms: Update ${path}`,
-          content: btoa(content),
-          branch,
-          ...(sha ? { sha } : {}),
-        }),
-      })
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(`Failed to write file: ${error.message || response.statusText}`)
-      }
-      const data = await response.json()
-      return { sha: data.content.sha }
-    },
-  }
-
-  return { content, media, config: configBackend }
 }
 
 /**
  * GitHub backend factory - creates backend after authentication.
  * Use this with CMS component.
  */
-export function github(config: GitHubConfig) {
+export function createGithubBackend(config: GitHubConfig) {
+  function create(config: GitHubBackendConfig): Backend {
+    const client = new GitHubClient(config.token, config)
+    const branch = config.branch || 'main'
+    const contentPath = config.contentPath || 'content'
+
+    const content: ContentBackend = {
+      async listCollection(collection: string): Promise<ContentItem[]> {
+        const files = await client.listCollection(collection)
+        const items: ContentItem[] = []
+
+        for (const file of files) {
+          if (file.type === 'file' && file.name.endsWith('.json')) {
+            try {
+              const { data, sha } = await client.getJSON(collection, file.name)
+              items.push({
+                id: file.name.replace('.json', ''),
+                sha,
+                data: data as Record<string, unknown>,
+              })
+            } catch (e) {
+              console.error(`Failed to load ${file.name}:`, e)
+            }
+          }
+        }
+
+        return items
+      },
+
+      async getItem(collection: string, id: string): Promise<ContentItem> {
+        const { data, sha } = await client.getJSON(collection, `${id}.json`)
+        return { id, sha, data: data as Record<string, unknown> }
+      },
+
+      async saveItem(
+        collection: string,
+        id: string,
+        data: Record<string, unknown>,
+        sha?: string,
+      ): Promise<{ sha?: string }> {
+        const filename = `${id}.json`
+        const message = sha
+          ? `cms: Update ${collection}/${filename}`
+          : `cms: Create ${collection}/${filename}`
+        return client.saveJSON(collection, filename, data, message, sha)
+      },
+
+      async deleteItem(collection: string, id: string, sha?: string): Promise<void> {
+        const filename = `${id}.json`
+        const message = `cms: Delete ${collection}/${filename}`
+        await client.deleteFile(collection, filename, message, sha!)
+      },
+    }
+
+    const media: MediaBackend = {
+      async listMedia(): Promise<MediaFile[]> {
+        const uploadsPath = `${contentPath}/uploads`
+        const files = await client.listFolder(uploadsPath, true)
+
+        return files
+          .filter(f => f.type === 'file')
+          .map(f => ({
+            name: f.name,
+            path: f.path,
+            sha: f.sha,
+            size: f.size,
+            url: `https://raw.githubusercontent.com/${config.owner}/${config.repo}/${branch}/${f.path}`,
+          }))
+      },
+
+      async uploadFile(file: File, folder?: string): Promise<{ url: string; sha?: string }> {
+        const uploadPath = folder ? `uploads/${folder}` : 'uploads'
+        return client.uploadFile(file, uploadPath)
+      },
+
+      async deleteFile(path: string, sha?: string): Promise<void> {
+        await client.deleteFileByPath(path, `cms: Delete media ${path}`, sha!)
+      },
+    }
+
+    const configBackend: ConfigBackend = {
+      async readFile(path: string) {
+        const url = `https://api.github.com/repos/${config.owner}/${config.repo}/contents/${path}?ref=${branch}`
+        const response = await fetch(url, {
+          headers: {
+            Accept: 'application/vnd.github+json',
+            Authorization: `Bearer ${config.token}`,
+          },
+        })
+        if (!response.ok) {
+          throw new Error(`Failed to read file: ${response.statusText}`)
+        }
+        const data = await response.json()
+        return {
+          content: atob(data.content),
+          sha: data.sha,
+        }
+      },
+
+      async writeFile(path: string, content: string, sha?: string) {
+        const url = `https://api.github.com/repos/${config.owner}/${config.repo}/contents/${path}`
+        const response = await fetch(url, {
+          method: 'PUT',
+          headers: {
+            Accept: 'application/vnd.github+json',
+            Authorization: `Bearer ${config.token}`,
+          },
+          body: JSON.stringify({
+            message: `cms: Update ${path}`,
+            content: btoa(content),
+            branch,
+            ...(sha ? { sha } : {}),
+          }),
+        })
+        if (!response.ok) {
+          const error = await response.json()
+          throw new Error(`Failed to write file: ${error.message || response.statusText}`)
+        }
+        const data = await response.json()
+        return { sha: data.content.sha }
+      },
+    }
+
+    return { content, media, config: configBackend }
+  }
+
   return {
     config,
-    createBackend: (token: string) => createGitHubBackend({ ...config, token }),
-    getUser: (token: string) => new GitHubClient(token, config).getUser(),
+    createBackend: (token: string) => create({ ...config, token }),
   }
 }
