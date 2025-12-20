@@ -6,7 +6,7 @@ A git-based headless CMS for SolidJS with type-safe content management.
 
 - **Git-based storage** - Content stored as JSON files in your repository
 - **Type-safe schemas** - Define content types with Valibot schemas
-- **Schema versioning** - Automatic migrations when schemas change
+- **Schema versioning** - Migrate old content when loading
 - **Media management** - Upload and manage images/files
 - **Type-safe client** - Fully typed frontend API with IntelliSense
 - **Embeddable** - Drop into existing SolidJS apps with @solidjs/router
@@ -23,24 +23,26 @@ pnpm add @plasticine/core
 
 ```ts
 // config.ts
-import { defineConfig, fields } from '@plasticine/core'
-import * as v from 'valibot'
+import { defineConfig, schema, slug, text, textarea, image, boolean } from '@plasticine/core'
+import { object, optional } from 'valibot'
 
 export default defineConfig({
-  collections: {
-    posts: v.object({
-      slug: fields.slug(),
-      title: fields.text({ label: 'Title' }),
-      content: fields.textarea({ label: 'Content' }),
-      cover: fields.image({ label: 'Cover Image' }),
-      published: fields.boolean({ label: 'Published' }),
+  posts: schema(
+    object({
+      slug: slug(),
+      title: text({ label: 'Title' }),
+      content: textarea({ label: 'Content' }),
+      cover: optional(image({ label: 'Cover Image' })),
+      published: boolean({ label: 'Published' }),
     }),
-    authors: v.object({
-      slug: fields.slug(),
-      name: fields.text({ label: 'Name' }),
-      avatar: fields.image({ label: 'Avatar' }),
+  ),
+  authors: schema(
+    object({
+      slug: slug(),
+      name: text({ label: 'Name' }),
+      avatar: optional(image({ label: 'Avatar' })),
     }),
-  },
+  ),
 })
 ```
 
@@ -142,47 +144,49 @@ const backend = createGithubBackend({
 ## Field Types
 
 ```ts
-import { fields } from '@plasticine/core'
+import { text, textarea, number, boolean, slug, image, date, markdown, select, reference } from '@plasticine/core'
 
-fields.text({ label: 'Title' })
-fields.textarea({ label: 'Description' })
-fields.number({ label: 'Count' })
-fields.boolean({ label: 'Published' })
-fields.slug()  // Auto-validates slug format
-fields.image({ label: 'Cover' })
-fields.file({ label: 'Attachment' })
+text({ label: 'Title' })
+textarea({ label: 'Description' })
+number({ label: 'Count' })
+boolean({ label: 'Published' })
+slug()  // Auto-validates slug format
+image({ label: 'Cover', path: 'covers' })
+date({ label: 'Published Date' })
+markdown({ label: 'Content' })
+select(['draft', 'published', 'archived'] as const, { label: 'Status' })
+reference('authors', { label: 'Author' })  // Reference another collection
 ```
 
 ## Schema Versioning
 
-Schemas support versioning with automatic migrations:
+Schemas support versioning with automatic migrations using chained `.version()` calls:
 
 ```ts
-import { defineConfig, versioned } from '@plasticine/core'
+import { defineConfig, schema, text, slug, boolean } from '@plasticine/core'
+import { object } from 'valibot'
 
 export default defineConfig({
-  collections: {
-    posts: versioned(
-      // Previous versions
-      [
-        v.object({ title: v.string() }), // v0
-        v.object({ title: v.string(), slug: v.string() }), // v1
-      ],
-      // Current schema
-      v.object({
-        title: v.string(),
-        slug: v.string(),
-        published: v.boolean(),
-      }),
-      // Migrations
-      [
-        (data) => ({ ...data, slug: slugify(data.title) }), // v0 -> v1
-        (data) => ({ ...data, published: false }), // v1 -> v2
-      ]
-    ),
-  },
+  posts: schema(
+    // v0: Initial schema
+    object({
+      slug: slug(),
+      title: text({ label: 'Title' }),
+    }),
+  ).version(
+    // v1: Add published field
+    object({
+      slug: slug(),
+      title: text({ label: 'Title' }),
+      published: boolean({ label: 'Published' }),
+    }),
+    // Migration from v0 -> v1
+    (old) => ({ ...old, published: false }),
+  ),
 })
 ```
+
+When content is loaded, it automatically migrates through each version to reach the current schema.
 
 ## CLI
 
