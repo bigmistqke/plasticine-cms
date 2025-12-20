@@ -1,14 +1,14 @@
 import { Route, Router, useNavigate, useSearchParams } from '@solidjs/router'
 import { Show } from 'solid-js'
-import { type BackendFactory } from './backend/types'
-import { Auth } from './components/Auth'
-import { Editor } from './components/Editor'
-import { ItemList } from './components/ItemList'
-import { Link } from './components/Link'
-import { MediaLibrary } from './components/MediaLibrary'
-import { SchemaEditor } from './components/SchemaEditor'
-import type { CollectionsConfig, PlasticineConfig } from './config/define-config'
+import { type BackendFactory } from '../backend/types'
+import type { CollectionsConfig, PlasticineConfig } from '../config/define-config'
+import { Auth } from './Auth'
 import { CMSProvider, useCMS } from './context'
+import { Editor } from './Editor'
+import { ItemList } from './ItemList'
+import { Link } from './Link'
+import { MediaLibrary } from './MediaLibrary'
+import { SchemaEditor } from './SchemaEditor'
 
 interface CMSProps<T extends CollectionsConfig = CollectionsConfig> {
   config: PlasticineConfig<T>

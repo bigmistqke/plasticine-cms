@@ -1,6 +1,6 @@
 import { createContext, useContext, type JSX } from 'solid-js'
-import { BackendFactory } from './backend/types'
-import type { PlasticineConfig } from './config/define-config'
+import { BackendFactory } from '../backend/types'
+import type { PlasticineConfig } from '../config/define-config'
 import { CMSStore, createCMSStore } from './store'
 
 /**

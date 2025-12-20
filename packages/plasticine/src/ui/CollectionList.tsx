@@ -1,5 +1,5 @@
 import { For } from 'solid-js'
-import { useCMS } from '../context'
+import { useCMS } from './context'
 import { Link } from './Link'
 
 interface CollectionListProps {

@@ -1,8 +1,8 @@
 import { createStore, produce } from 'solid-js/store'
-import { tokenStorage } from './backend/github'
-import type { Backend, BackendFactory, ContentItem, MediaFile } from './backend/types'
-import type { PlasticineConfig } from './config/define-config'
-import { getSchemaEntries, getSchemaMetadata } from './config/schema'
+import { tokenStorage } from '../backend/github'
+import type { Backend, BackendFactory, ContentItem, MediaFile } from '../backend/types'
+import type { PlasticineConfig } from '../config/define-config'
+import { getSchemaEntries, getSchemaMetadata } from '../config/schema'
 
 export interface CMSProps {
   config: PlasticineConfig<any>

@@ -1,7 +1,7 @@
 import { useAction, useSubmission } from '@solidjs/router'
 import { For, Show } from 'solid-js'
-import { deleteItemAction } from '../actions'
-import { useCMS } from '../context'
+import { deleteItemAction } from './actions'
+import { useCMS } from './context'
 import { Link } from './Link'
 
 interface ItemListProps {

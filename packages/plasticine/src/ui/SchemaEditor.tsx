@@ -1,7 +1,7 @@
 import { useAction, useSubmission } from '@solidjs/router'
 import { createEffect, createSignal, onMount, Show } from 'solid-js'
-import { saveSchemaAction } from '../actions'
-import { useCMS } from '../context'
+import { saveSchemaAction } from './actions'
+import { useCMS } from './context'
 
 export function SchemaEditor() {
   const [state, actions] = useCMS()

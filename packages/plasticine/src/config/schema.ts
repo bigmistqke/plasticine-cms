@@ -1,5 +1,6 @@
 import * as v from 'valibot'
-import { Prettify } from '../types'
+
+type Prettify<T> = { [K in keyof T]: T[K] } & {}
 
 /**
  * Infer the output type from a VersionedSchema
@@ -15,8 +16,8 @@ export type Infer<T extends { schema: v.GenericSchema }> = v.InferOutput<T['sche
 
 class SchemaError<
   TSchema extends
-    | v.BaseSchema<unknown, unknown, v.BaseIssue<unknown>>
-    | v.BaseSchemaAsync<unknown, unknown, v.BaseIssue<unknown>>,
+  | v.BaseSchema<unknown, unknown, v.BaseIssue<unknown>>
+  | v.BaseSchemaAsync<unknown, unknown, v.BaseIssue<unknown>>,
 > extends Error {
   readonly issues: Array<[v.InferIssue<TSchema>, ...v.InferIssue<TSchema>[]]>
 

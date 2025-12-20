@@ -1,6 +1,6 @@
 import { For, Show, createSignal } from 'solid-js'
-import { useCMS } from '../context'
 import { type MediaFile } from '../backend/types'
+import { useCMS } from './context'
 
 /**
  * Media library for viewing and managing uploaded files

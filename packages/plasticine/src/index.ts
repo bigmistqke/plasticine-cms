@@ -4,27 +4,23 @@ export * from './config/fields'
 export * from './config/schema'
 
 // Client
-export * from './client'
+export * from './client/client'
+export * from './client/github'
 
 // Backend
 export * from './backend/github'
 export * from './backend/types'
 
-// Store
-export * from './store'
-
-// Actions
-export * from './actions'
-
-// Components
-export * from './CMS'
-export * from './components/Auth'
-export * from './components/CollectionList'
-export * from './components/Editor'
-export * from './components/FieldComponents'
-export * from './components/ItemList'
-export * from './components/MediaLibrary'
-export * from './components/SchemaEditor'
-export * from './components/SchemaForm'
-
+// UI
+export * from './ui/actions'
+export * from './ui/Auth'
+export * from './ui/CMS'
+export * from './ui/CollectionList'
+export * from './ui/Editor'
+export * from './ui/FieldComponents'
+export * from './ui/ItemList'
+export * from './ui/MediaLibrary'
+export * from './ui/SchemaEditor'
+export * from './ui/SchemaForm'
+export * from './ui/store'
 

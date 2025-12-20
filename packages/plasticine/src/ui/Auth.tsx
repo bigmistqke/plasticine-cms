@@ -1,5 +1,5 @@
 import { Match, Show, Switch, createSignal } from 'solid-js'
-import { useCMS } from '../context'
+import { useCMS } from './context'
 
 /**
  * Authentication component with Device Flow OAuth support

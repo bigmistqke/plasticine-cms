@@ -1,6 +1,6 @@
 import { useSearchParams } from '@solidjs/router'
 import { JSX } from 'solid-js'
-import { CMSParams } from '../CMS'
+import { CMSParams } from './CMS'
 
 const PARAMS = ['view', 'collection', 'item'] as const
 

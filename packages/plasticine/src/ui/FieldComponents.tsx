@@ -4,7 +4,7 @@ import { Dynamic, Index } from 'solid-js/web'
 import type * as v from 'valibot'
 import type { FieldMetadata, FieldUIType } from '../config/fields'
 import { getSchemaMetadata } from '../config/schema'
-import { useCMS } from '../context'
+import { useCMS } from './context'
 
 export interface FieldState {
   input: unknown

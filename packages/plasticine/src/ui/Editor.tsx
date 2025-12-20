@@ -1,9 +1,9 @@
 import { useAction, useNavigate, useSubmission } from '@solidjs/router'
 import { Show } from 'solid-js'
 import type * as v from 'valibot'
-import { saveItemAction } from '../actions'
 import { type ContentItem } from '../backend/types'
-import { useCMS } from '../context'
+import { saveItemAction } from './actions'
+import { useCMS } from './context'
 import { SchemaForm } from './SchemaForm'
 
 interface EditorProps {
