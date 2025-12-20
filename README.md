@@ -22,7 +22,7 @@ pnpm add @plasticine/core
 ### 1. Define your schema
 
 ```ts
-// config.ts
+// plasticine.config.ts
 import { defineConfig, schema, slug, text, textarea, image, boolean } from '@plasticine/core'
 import { object, optional } from 'valibot'
 
@@ -53,7 +53,7 @@ export default defineConfig({
 import { CMS, createGithubAuth, createGithubBackend } from '@plasticine/core'
 import '@plasticine/core/styles.css'
 import { Route, Router } from '@solidjs/router'
-import config from './config'
+import config from '../plasticine.config'
 
 const backend = createGithubBackend({
   owner: 'your-username',
@@ -70,14 +70,7 @@ render(
       <Route path="/*" component={App} />
       <Route
         path="/admin/*"
-        component={() => (
-          <CMS
-            config={config}
-            backend={backend}
-            auth={auth}
-            schemaPath="config.ts"
-          />
-        )}
+        component={() => <CMS config={config} backend={backend} auth={auth} />}
       />
     </Router>
   ),
@@ -89,7 +82,7 @@ render(
 
 ```ts
 import { createGitHubClient, Infer } from '@plasticine/core'
-import config from './config'
+import config from '../plasticine.config'
 
 const content = createGitHubClient(config, {
   owner: 'your-username',
@@ -144,18 +137,29 @@ const backend = createGithubBackend({
 ## Field Types
 
 ```ts
-import { text, textarea, number, boolean, slug, image, date, markdown, select, reference } from '@plasticine/core'
+import {
+  text,
+  textarea,
+  number,
+  boolean,
+  slug,
+  image,
+  date,
+  markdown,
+  select,
+  reference,
+} from '@plasticine/core'
 
 text({ label: 'Title' })
 textarea({ label: 'Description' })
 number({ label: 'Count' })
 boolean({ label: 'Published' })
-slug()  // Auto-validates slug format
+slug() // Auto-validates slug format
 image({ label: 'Cover', path: 'covers' })
 date({ label: 'Published Date' })
 markdown({ label: 'Content' })
 select(['draft', 'published', 'archived'] as const, { label: 'Status' })
-reference('authors', { label: 'Author' })  // Reference another collection
+reference('authors', { label: 'Author' }) // Reference another collection
 ```
 
 ## Schema Versioning
@@ -181,7 +185,7 @@ export default defineConfig({
       published: boolean({ label: 'Published' }),
     }),
     // Migration from v0 -> v1
-    (old) => ({ ...old, published: false }),
+    old => ({ ...old, published: false }),
   ),
 })
 ```
@@ -196,6 +200,9 @@ pnpm plasticine migrate --dry-run
 
 # Apply migrations
 pnpm plasticine migrate
+
+# Custom config path (uses ./plasticine.config.ts by default)
+pnpm plasticine migrate -c ./src/config.ts
 ```
 
 ## License
